@@ -5,3 +5,5 @@
 !/screenshots/example*
 /plots/*
 !/plots/example*
+/csv/*
+!/csv/example*

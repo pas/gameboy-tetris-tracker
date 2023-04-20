@@ -10,9 +10,12 @@ class CSVWriter:
     self._write(self.headers[1], self.headers[2], self.headers[0])
 
   def write(self, score, lines, time=datetime.datetime.now()):
-    self._write(score, lines, time)
+    """
+    Expects a datetime object
+    """
+    self._write(score, lines, time.strftime("%Y/%m/%d %H:%M:%S"))
 
   def _write(self, score, lines, time):
-    with open(self.file_name) as csv_file:
+    with open(self.file_name, 'a+', newline='') as csv_file:
       csv_writer = csv.writer(csv_file)
-      csv_writer.writerows([time, score, lines])
+      csv_writer.writerow([time, score, lines])
