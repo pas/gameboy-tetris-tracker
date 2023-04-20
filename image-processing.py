@@ -66,7 +66,7 @@ class Runner:
         accepted_score = int(current_score)
         print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))
 
-        csv_file.write(accepted_lines, accepted_lines)
+        csv_file.write(accepted_score, accepted_lines)
         score_array.append(accepted_score)
         lines_array.append(accepted_lines)
 
