@@ -5,14 +5,16 @@ class CSVWriter:
   headers = ["time", "score", "lines"]
   file_name = ""
 
-  def __init__(self, file_name="csv/results.csv"):
-    self.file_name = file_name
+  def __init__(self, path="csv/", file_name="results.csv"):
+    prefix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    self.file_name = path + prefix + "-" + file_name
     self._write(self.headers[1], self.headers[2], self.headers[0])
 
-  def write(self, score, lines, time=datetime.datetime.now()):
+  def write(self, score, lines):
     """
     Expects a datetime object
     """
+    time = datetime.datetime.now()
     self._write(score, lines, time.strftime("%Y/%m/%d %H:%M:%S"))
 
   def _write(self, score, lines, time):
