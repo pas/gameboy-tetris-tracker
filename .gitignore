@@ -1,0 +1,6 @@
+/venv
+/.idea
+/screenshots/*
+!/screenshots/example*
+/plots/*
+!/plots/example*
