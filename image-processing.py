@@ -7,6 +7,7 @@ from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from csvfile import CSVWriter
 import yaml
+import calculations
 
 # Use this if your tesseract excutable is not in PATH
 #pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -42,9 +43,52 @@ class Runner:
     bordered = ImageOps.expand(bordered, border=10, fill='white')
     return np.array(bordered)
 
+  def add_slope(self, slope, ax):
+    x_min, x_max = ax.get_xlim()
+    y_min, y_max = 0, slope * (x_max - x_min)
+    ax.plot([x_min, x_max], [y_min, y_max])
+    ax.set_xlim([x_min, x_max])
+
+  def get_limits(self, current_max_score, current_max_lines):
+    score = 1000
+
+    # the uglier the better...
+    if current_max_score > 1000:
+      score = 10000
+    if current_max_score > 10000:
+      score = 100000
+    if current_max_score > 100000:
+      score = 500000
+    if current_max_score > 500000:
+      score = 999999
+
+    lines = 10
+    if current_max_lines > 10:
+      lines = 50
+    if current_max_lines > 50:
+      lines = 100
+    if current_max_lines > 100:
+      lines = 150
+    if current_max_lines > 150:
+      lines = 200
+    if current_max_lines > 200:
+      lines = 250
+    if current_max_lines > 250:
+      lines = 300
+
+    return score, lines
+
   def show_plot(self, scores, lines):
-    plt.scatter(lines, scores)
-    plt.savefig(r'plots/test.png')
+    if(len(scores) > 3):
+      fig, ax = plt.subplots()
+      ax.scatter(lines, scores)
+      top, right = self.get_limits(scores[len(scores)-1], lines[len(lines)-1])
+      ax.set_xlim(left=0, right=right)
+      ax.set_ylim(bottom=0, top=top)
+      slope = calculations.get_slope(lines, scores)
+      self.add_slope(slope, ax)
+
+      fig.savefig(r'plots/test.png')
 
   def run(self, debug=False):
     csv_file = CSVWriter()
@@ -70,7 +114,8 @@ class Runner:
         score_array.append(accepted_score)
         lines_array.append(accepted_lines)
 
-      self.show_plot(score_array, lines_array)
+        self.show_plot(score_array, lines_array)
+
       time.sleep(1)
 
       if (cv2.waitKey(1) & 0xFF) == ord('q'):
