@@ -1,12 +1,12 @@
 lines:
   bounding_box:
-    top: 540
-    left: 879
-    width: 182
-    height: 39
+    top: 351
+    left: 4415
+    width: 112
+    height: 29
 score:
   bounding_box:
-    top: 271
-    left: 856
-    width: 235
-    height: 42
+    top: 168
+    left: 4383
+    width: 173
+    height: 28

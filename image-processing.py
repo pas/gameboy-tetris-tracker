@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from csvfile import CSVWriter
 import yaml
 import calculations
+from play_sounds import play_file
+import pathlib
 
 # Use this if your tesseract excutable is not in PATH
 #pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -89,6 +91,7 @@ class Runner:
       self.add_slope(slope, ax)
 
       fig.savefig(r'plots/test.png')
+      plt.close(fig)
 
   def run(self, debug=False):
     csv_file = CSVWriter()
@@ -129,4 +132,7 @@ class Runner:
 
 if __name__ == "__main__":
   runner = Runner()
+  time.sleep(1)
+  audio_path = pathlib.Path("sounds/start-ready-go.wav")
+  play_file(audio_path)
   runner.run()
