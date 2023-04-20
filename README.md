@@ -6,7 +6,7 @@ This project is in a very early prototyping phase. You will need to tweek it to 
 
     python retrieve_bounding_box.py
 
-Drag from left top corner to bottom right corner. Copy bounding box into image-processing.py file.
+Drag from left top corner to bottom right corner. Copy bounding box into config.yml file.
 
 # Check if bounding boxes are correct
 
