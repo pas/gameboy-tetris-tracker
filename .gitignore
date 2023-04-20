@@ -1,5 +1,6 @@
 /venv
 /.idea
+/__pycache__
 /screenshots/*
 !/screenshots/example*
 /plots/*
