@@ -34,7 +34,7 @@ class BoundingBoxWidget(object):
         elif event == cv2.EVENT_LBUTTONUP:
             self.image_coordinates.append((x,y))
             print('top left: {}, bottom right: {}'.format(self.image_coordinates[0], self.image_coordinates[1]))
-            print("top: {}\nleft: {}\nheight: {}\nwidth: {}".format(self.image_coordinates[0][1], self.image_coordinates[0][0], self.image_coordinates[1][0] - self.image_coordinates[0][0], self.image_coordinates[1][1] - self.image_coordinates[0][1]))
+            print("top: {}\nleft: {}\nwidth: {}\nheight: {}".format(self.image_coordinates[0][1], self.image_coordinates[0][0], self.image_coordinates[1][0] - self.image_coordinates[0][0], self.image_coordinates[1][1] - self.image_coordinates[0][1]))
 
             # Draw rectangle
             cv2.rectangle(self.clone, self.image_coordinates[0], self.image_coordinates[1], (36,255,12), 2)
