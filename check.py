@@ -13,6 +13,7 @@ import yaml
 class Check:
   bounding_box_score = ""
   bounding_box_lines = ""
+  bounding_box_playfield = ""
   sct = ""
   configs = ""
 
@@ -22,6 +23,7 @@ class Check:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box_lines = self.configs["lines"]["bounding_box"]
       self.bounding_box_score = self.configs["score"]["bounding_box"]
+      self.bounding_box_playfield = self.configs["playfield"]["bounding_box"]
 
   def grab_and_write_image(self, bounding_box, numbering=0, postfix=""):
     image = self.grab_image(bounding_box)
@@ -33,6 +35,7 @@ class Check:
     while counter < times or times==-1:
       self.grab_and_write_image(self.bounding_box_lines, numbering=counter, postfix="-lines")
       self.grab_and_write_image(self.bounding_box_score, numbering=counter, postfix="-score")
+      self.grab_and_write_image(self.bounding_box_playfield, numbering=counter, postfix="-playfield")
       counter += 1
       time.sleep(intervall)
 

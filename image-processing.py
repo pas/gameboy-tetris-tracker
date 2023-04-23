@@ -17,6 +17,7 @@ import pathlib
 class Runner:
   bounding_box_score = ""
   bounding_box_lines = ""
+  bounding_box_playfield = ""
   sct = ""
   configs = ""
 

@@ -10,3 +10,10 @@ score:
     left: 4383
     width: 173
     height: 28
+playfield:
+  bounding_box:
+    top: 90
+    left: 4381
+    width: 198
+    height: 289
+
