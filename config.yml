@@ -12,8 +12,9 @@ score:
     height: 28
 playfield:
   bounding_box:
-    top: 90
-    left: 4381
-    width: 198
-    height: 289
+    top: 88
+    left: 4070
+    width: 312
+    height: 468
+
 

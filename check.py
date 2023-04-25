@@ -31,6 +31,7 @@ class Check:
     cv2.imwrite('screenshots/screenshot-' + str(numbering) + postfix + ".png", np.array(image))
 
   def screenshots(self, times=-1, intervall=1):
+    self.check_width_and_length()
     counter = 0
     while counter < times or times==-1:
       self.grab_and_write_image(self.bounding_box_lines, numbering=counter, postfix="-lines")
@@ -39,12 +40,20 @@ class Check:
       counter += 1
       time.sleep(intervall)
 
+  def check_width_and_length(self):
+    """
+    Should be dividable by 18 in height
+    and by 12 in width
+    """
+    print("Modulo width: " + str(self.bounding_box_playfield["width"] % 12))
+    print("Modulo height: " + str(self.bounding_box_playfield["height"] % 18))
+
   def grab_image(self, bounding_box):
     return self.sct.grab(bounding_box)
 
   def add_border(self, image_as_array):
     bordered = Image.fromarray(np.array(image_as_array))
-    bordered = ImageOps.expand(bordered, border=10, fill='white')
+    bordered = ImageOps.expand(bordered, border=10, fill='blue')
     return np.array(bordered)
 
   def tess(self, image):

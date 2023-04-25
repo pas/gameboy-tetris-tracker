@@ -1,5 +1,7 @@
 # gameboy-tetris-tracker
 
+This project came to light when talking with Tolstoy. Many ideas where either directly provided by Tolstoj or are derivates of those ideas. All tile images where provided by him! Thanks a lot!
+
 This project is in a very early prototyping phase. You will need to tweek it to make it work, for example the bounding boxes for the screenshots are hardcoded. You will have to adapt them by hand.
 
 ## grabbing the bounding boxes
@@ -13,4 +15,3 @@ Drag from left top corner to bottom right corner. Copy bounding box into config.
     python check.py
 
  Then look at the screenshots at screenshots/ folder. Do the fully show the scores and the lines without any borders? If not, reset your bounding boxes.
-

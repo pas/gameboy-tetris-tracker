@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from mss import mss
 import pytesseract
 import time
@@ -10,6 +9,7 @@ import yaml
 import calculations
 from play_sounds import play_file
 import pathlib
+from playfield_processor import PlayfieldProcessor
 
 # Use this if your tesseract excutable is not in PATH
 #pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -27,6 +27,7 @@ class Runner:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box_lines = self.configs["lines"]["bounding_box"]
       self.bounding_box_score = self.configs["score"]["bounding_box"]
+      self.bounding_box_playfield = self.configs["playfield"]["bounding_box"]
 
   def grab_and_process_image(self, bouding_box):
     """
@@ -38,7 +39,17 @@ class Runner:
     result = self.tess(image)
     return result
 
+  def grab_and_process_playfield(self, bounding_box):
+    image = self.grab_image(bounding_box)
+    playfield = PlayfieldProcessor(image)
+    print(playfield.run())
+
   def grab_image(self, bounding_box):
+    """
+    Returns mss ScreenShot object: https://python-mss.readthedocs.io/api.html#mss.base.ScreenShot
+    :param bounding_box:
+    :return: mss ScreenShot object
+    """
     return self.sct.grab(bounding_box)
 
   def add_border(self, image_as_array):
@@ -104,6 +115,7 @@ class Runner:
     while True:
       current_score = self.grab_and_process_image(self.bounding_box_score)
       current_lines = self.grab_and_process_image(self.bounding_box_lines)
+      self.grab_and_process_playfield(self.bounding_box_playfield)
 
       if(debug):
         print(current_score)
@@ -122,9 +134,6 @@ class Runner:
 
       time.sleep(1)
 
-      if (cv2.waitKey(1) & 0xFF) == ord('q'):
-        cv2.destroyAllWindows()
-        break
 
   def tess(self, image):
     # Run tesseract in one-line mode (--psm=6)
