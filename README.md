@@ -4,6 +4,13 @@ This project came to light during a conversation with Tolstoj. Many ideas where 
 
 This project is in a very early prototyping phase. You will need to tweek it to make it work, for example the bounding boxes for the screenshots are hardcoded. You will have to adapt them by hand.
 
+## Preconditions
+
+You'll need to have tesseract installed. 
+
+### Windows
+For windows user the UB Mannheim provides a windows version: https://hypi.app/assets/wp/wp-content/uploads/2019/10/wiki/
+
 ## grabbing the bounding boxes
 
 Use a still image with your setting where the video will be shown on the screen. Run the program:

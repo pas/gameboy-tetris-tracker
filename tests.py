@@ -1,11 +1,61 @@
 import unittest
-from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator
+from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator, GameboyViewProcessor, NumberProcessor
 from PIL import Image
 import numpy as np
 from tile_recognizer import TileRecognizer, Tile, Tiler
 from csvfile import CSVReader
 
 class TestPlayfieldProcessor(unittest.TestCase):
+
+  def create_gameboy_view_processor(self):
+      image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
+      return GameboyViewProcessor(image)
+
+  def test_combine_gameboy_view_processor_and_other_processors(self):
+      processor = self.create_gameboy_view_processor()
+
+      preview_image = processor.get_preview()
+      preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
+      preview = preview_processor.run()
+      self.assertEqual(preview, TileRecognizer.T_MINO)
+
+      score_image = processor.get_score()
+      print(score_image.shape)
+      score_image = self.untile(score_image)
+      print(score_image.shape)
+      number_processor = NumberProcessor(score_image)
+      score = number_processor.get_number()
+      self.assertEqual(39, score)
+
+  def untile(self, image):
+      shape = image.shape
+      nr_of_tiles_height = shape[0]
+      nr_of_tiles_width = shape[1]
+      tile_width = shape[2]
+      tile_height = shape[3]
+      color_channels = shape[4]
+      return image.swapaxes(1, 2).reshape(nr_of_tiles_height*tile_height, nr_of_tiles_width*tile_width, color_channels)
+
+  def test_gameboy_view_processor(self):
+      processor = self.create_gameboy_view_processor()
+
+      playfield = processor.get_playfield()
+      self.assertEqual(playfield.shape[0], 18)
+      self.assertEqual(playfield.shape[1], 10)
+
+      preview = processor.get_preview()
+      self.assertEqual(preview.shape[0], 4)
+      self.assertEqual(preview.shape[1], 4)
+
+      score = processor.get_score()
+      self.assertEqual(score.shape[0], 1)
+      self.assertEqual(score.shape[1], 6)
+
+      lines = processor.get_lines()
+      self.assertEqual(lines.shape[0], 1)
+      self.assertEqual(lines.shape[1], 3)
+
+
   def test_l_mino(self):
     recognizer = TileRecognizer()
     tile = np.array(Image.open("test/debug/L-mino-1.png").convert('RGB'))

@@ -2,6 +2,52 @@ import numpy as np
 from PIL import Image, ImageOps, ImageStat
 import cv2
 from tile_recognizer import TileRecognizer, Tiler
+import pytesseract
+
+class GameboyImage():
+  """
+  Provides standard operations for
+  a full or part gameboy screen image
+  """
+  def __init__(self, image, nr_of_tiles_height, nr_of_tiles_width, is_tiled=True):
+    """
+    Image as numpy array.
+    """
+    self.image = image
+    self.is_tiled = is_tiled
+
+  def tile(self):
+    """
+    Tiles the image and returns it.
+    """
+    if(not self.is_tiled):
+      self._tile()
+
+    return self.image
+
+  def _tile(self):
+    self.image
+
+  def untile(self):
+    """
+    Untiles the image and returns it.
+    """
+    if(self.is_tiled):
+      self._untile()
+
+    return self.image
+
+  def _untile(self):
+    shape = self.image.shape
+    nr_of_tiles_height = shape[0]
+    nr_of_tiles_width = shape[1]
+    tile_width = shape[2]
+    tile_height = shape[3]
+    color_channels = shape[4]
+    self.image = self.image.swapaxes(1, 2).reshape(nr_of_tiles_height * tile_height, nr_of_tiles_width * tile_width,
+                                        color_channels)
+
+
 
 class PlayfieldRecreator():
   def __init__(self):
@@ -48,14 +94,71 @@ class PlayfieldRecreator():
       self._open_image("images/tiles/2F.png"), #white
     ]
 
+class NumberProcessor():
+  def __init__(self, image):
+    self.original_image = np.array(image)
+    self.processed_image = self._add_border(image)
+    self.number = self._run()
+
+  def _add_border(self, image_as_array):
+    bordered = Image.fromarray(np.array(image_as_array))
+    bordered = ImageOps.expand(bordered, border=10, fill='white')
+    return np.array(bordered)
+
+  def _run(self):
+    return int(self._ocr(self.processed_image))
+
+  def _ocr(self, image):
+    # Run tesseract in one-line mode (--psm=6)
+    # Use training data specifically trained for tetris numbers
+    return pytesseract.image_to_string(image, config=r'--dpi 252 --psm 6 --tessdata-dir .', lang="tetris").strip()
+
+  def get_number(self):
+    return self.number
+
+class GameboyViewProcessor():
+  nr_of_tiles_width = 20
+  nr_of_tiles_height = 18
+
+  def __init__(self, image, save_tiles=False):
+    self.original_image = np.array(image)
+    self.tiled_image = self._tile_image()
+    self._run(save_tiles=save_tiles)
+
+  def _tile_image(self):
+    tiler = Tiler(GameboyViewProcessor.nr_of_tiles_height, GameboyViewProcessor.nr_of_tiles_width, self.original_image)
+    return tiler.adapted_image
+
+  def _run(self, save_tiles=False):
+    if(save_tiles):
+      for column_nr, column in enumerate(self.tiled_image):
+        for row_nr, tile in enumerate(column):
+          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-full-view-tile.png', tile)
+
+  def get_playfield(self):
+    return self.tiled_image[0:18,1:11].copy()
+
+  def get_preview(self):
+    return self.tiled_image[13:17, 15:19].copy()
+
+  def get_score(self):
+    return self.tiled_image[3:4, 13:19].copy()
+
+  def get_lines(self):
+    return self.tiled_image[10:11, 15:18].copy()
+
 class PreviewProcessor():
   nr_of_tiles_height = 4
   nr_of_tiles_width = 4
 
-  def __init__(self, image):
+  def __init__(self, image, image_is_tiled=False):
     self.original_image = np.array(image)
-    self.tiled_image = self.tile_image()
-    self.recognicer = TileRecognizer()
+    if(image_is_tiled):
+      self.tiled_image = np.array(image)
+    else:
+      self.tiled_image = self.tile_image()
+
+    self.recognizer = TileRecognizer()
 
   def tile_image(self):
     tiler = Tiler(PreviewProcessor.nr_of_tiles_height, PreviewProcessor.nr_of_tiles_width, self.original_image)
@@ -67,7 +170,7 @@ class PreviewProcessor():
       for row_nr, tile in enumerate(column):
         if(save_tiles):
           cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-preview-tile.png', tile)
-        result.append(self.recognicer.recognize(tile, simplify_i_mino=True))
+        result.append(self.recognizer.recognize(tile, simplify_i_mino=True))
 
     unique = np.unique(result)
 

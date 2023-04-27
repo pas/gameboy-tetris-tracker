@@ -8,3 +8,4 @@
 !/plots/example*
 /csv/*
 !/csv/example*
+/test/tiles/*
