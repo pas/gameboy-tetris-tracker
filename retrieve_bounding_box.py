@@ -49,7 +49,8 @@ class BoundingBoxWidget(object):
 
 if __name__ == '__main__':
     boundingbox_widget = BoundingBoxWidget()
-    while True:
+    cv2.imshow('image', boundingbox_widget.show_image())
+    while cv2.getWindowProperty('image', 0) >= 0:
         cv2.imshow('image', boundingbox_widget.show_image())
         key = cv2.waitKey(1)
 
