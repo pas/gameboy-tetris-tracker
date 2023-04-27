@@ -9,15 +9,13 @@ import yaml
 import calculations
 from play_sounds import play_file
 import pathlib
-from playfield_processor import PlayfieldProcessor, PreviewProcessor
+from playfield_processor import PlayfieldProcessor, PreviewProcessor, GameboyViewProcessor, GameboyImage, NumberProcessor
+import cv2
 
 # Use this if your tesseract excutable is not in PATH
 #pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 class Runner:
-  bounding_box_score = ""
-  bounding_box_lines = ""
-  bounding_box_playfield = ""
   sct = ""
   configs = ""
 
@@ -25,10 +23,7 @@ class Runner:
     self.sct = mss()
     with open('config.yml', 'r') as config_file:
       self.configs = yaml.safe_load(config_file)
-      self.bounding_box_lines = self.configs["lines"]["bounding_box"]
-      self.bounding_box_score = self.configs["score"]["bounding_box"]
-      self.bounding_box_playfield = self.configs["playfield"]["bounding_box"]
-      self.bounding_box_preview = self.configs["preview"]["bounding_box"]
+      self.bounding_box = self.configs["bounding_box"]
 
   def grab_and_process_image(self, bouding_box):
     """
@@ -110,6 +105,35 @@ class Runner:
       fig.savefig(r'plots/test.png')
       plt.close(fig)
 
+  def preview(self, processor):
+    preview_image = processor.get_preview()
+    preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
+    return preview_processor.run()
+
+  def playfield(self, processor):
+    playfield_image = processor.get_playfield()
+    playfield_processor = PlayfieldProcessor(playfield_image, image_is_tiled=True)
+    return playfield_processor.run()
+
+  def numbers(self, number_image):
+    number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
+                               number_image.shape[2], number_image.shape[3], is_tiled=True)
+    number_image.untile()
+    number_processor = NumberProcessor(number_image.image)
+    return number_processor.get_number()
+
+  def score(self, processor):
+    score_image = processor.get_score()
+    return self.numbers(score_image)
+
+  def lines(self, processor):
+    lines_image = processor.get_lines()
+    return self.numbers(lines_image)
+
+  def level(self, processor):
+    level_image = processor.get_level()
+    return self.numbers(level_image)
+
   def run(self, debug=False):
     csv_file = CSVWriter()
     accepted_score = -1
@@ -118,17 +142,21 @@ class Runner:
     lines_array = []
 
     while True:
-      current_score = self.grab_and_process_image(self.bounding_box_score)
-      current_lines = self.grab_and_process_image(self.bounding_box_lines)
-      current_playfield = self.grab_and_process_playfield(self.bounding_box_playfield)
-      current_preview = self.grab_and_process_preview(self.bounding_box_preview)
+      image = self.grab_image(self.bounding_box)
+      cv2.imwrite('test/current.png', np.array(image))
+      processor = GameboyViewProcessor(image)
+
+      current_score = self.score(processor)
+      current_lines = self.lines(processor)
+      current_preview = self.preview(processor)
+      current_playfield = self.playfield(processor)
 
       if(debug):
         print(current_score)
         print(current_lines)
 
       # The check for >= is a little bit of false value prevention (not a good one though...)
-      if current_score.isdigit() and current_lines.isdigit() and int(current_score) >= accepted_score and int(current_lines) >= accepted_lines:
+      if int(current_score) >= accepted_score and int(current_lines) >= accepted_lines:
         accepted_lines = int(current_lines)
         accepted_score = int(current_score)
         print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))

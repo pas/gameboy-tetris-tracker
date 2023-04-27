@@ -1,5 +1,5 @@
 import unittest
-from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator, GameboyViewProcessor, NumberProcessor
+from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator, GameboyViewProcessor, NumberProcessor, GameboyImage
 from PIL import Image
 import numpy as np
 from tile_recognizer import TileRecognizer, Tile, Tiler
@@ -7,34 +7,63 @@ from csvfile import CSVReader
 
 class TestPlayfieldProcessor(unittest.TestCase):
 
+  def test_gameboy_image(self):
+    processor = self.create_gameboy_view_processor()
+
+    #get a tiled 4x4 image
+    preview_image = processor.get_preview()
+
+    gameboy_image = GameboyImage(preview_image, 4, 4, 53, 53, is_tiled=True)
+    image = gameboy_image.untile()
+    self.assertEqual(4*53, image.shape[0])
+    self.assertEqual(4*53, image.shape[1])
+    self.assertEqual(3, image.shape[2])
+
+    image = gameboy_image.tile()
+    self.assertEqual(4, image.shape[0])
+    self.assertEqual(4, image.shape[1])
+    self.assertEqual(53, image.shape[2])
+    self.assertEqual(53, image.shape[3])
+    self.assertEqual(3, image.shape[4])
+
   def create_gameboy_view_processor(self):
-      image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
-      return GameboyViewProcessor(image)
+    image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
+    return GameboyViewProcessor(image)
 
   def test_combine_gameboy_view_processor_and_other_processors(self):
-      processor = self.create_gameboy_view_processor()
+    processor = self.create_gameboy_view_processor()
 
-      preview_image = processor.get_preview()
-      preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
-      preview = preview_processor.run()
-      self.assertEqual(preview, TileRecognizer.T_MINO)
+    preview_image = processor.get_preview()
+    preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
+    preview = preview_processor.run()
+    self.assertEqual(preview, TileRecognizer.T_MINO)
 
-      score_image = processor.get_score()
-      print(score_image.shape)
-      score_image = self.untile(score_image)
-      print(score_image.shape)
-      number_processor = NumberProcessor(score_image)
-      score = number_processor.get_number()
-      self.assertEqual(39, score)
+    score_image = processor.get_score()
+    score_image = GameboyImage(score_image, score_image.shape[0], score_image.shape[1],
+                               score_image.shape[2], score_image.shape[3], is_tiled=True)
+    score_image.save("test/")
+    score_image.untile()
+    number_processor = NumberProcessor(score_image.image)
+    score = number_processor.get_number()
+    self.assertEqual(39, score)
 
-  def untile(self, image):
-      shape = image.shape
-      nr_of_tiles_height = shape[0]
-      nr_of_tiles_width = shape[1]
-      tile_width = shape[2]
-      tile_height = shape[3]
-      color_channels = shape[4]
-      return image.swapaxes(1, 2).reshape(nr_of_tiles_height*tile_height, nr_of_tiles_width*tile_width, color_channels)
+    lines_image = processor.get_lines()
+    lines_image = GameboyImage(lines_image, lines_image.shape[0], lines_image.shape[1],
+                               lines_image.shape[2], lines_image.shape[3], is_tiled=True)
+    lines_image.untile()
+    number_processor = NumberProcessor(lines_image.image)
+    lines = number_processor.get_number()
+    self.assertEqual(0, lines)
+
+    level_image = processor.get_level()
+    level_image = GameboyImage(level_image, level_image.shape[0], level_image.shape[1],
+                               level_image.shape[2], level_image.shape[3], is_tiled=True)
+    level_image.untile()
+    number_processor = NumberProcessor(level_image.image)
+    level = number_processor.get_number()
+    self.assertEqual(0, level)
+
+    playfield_image = processor.get_playfield()
 
   def test_gameboy_view_processor(self):
       processor = self.create_gameboy_view_processor()
@@ -78,9 +107,9 @@ class TestPlayfieldProcessor(unittest.TestCase):
 
   def test_tiler(self):
     image = np.array(Image.open("test/scenario-2-high-res.png").convert('RGB'))
-    tiler = Tiler(18, 12, image)
+    tiler = Tiler(18, 10, image)
     assert(tiler.adapted_image.shape[0] == 18)
-    assert(tiler.adapted_image.shape[1] == 12)
+    assert(tiler.adapted_image.shape[1] == 10)
     self.assertEqual(tiler.tile_height, 53)
     self.assertEqual(tiler.tile_width, 53)
 
@@ -132,7 +161,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230427103034")
+    reader = CSVReader("20230427212001")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
