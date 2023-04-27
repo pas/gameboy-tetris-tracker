@@ -24,6 +24,7 @@ class Check:
       self.bounding_box_lines = self.configs["lines"]["bounding_box"]
       self.bounding_box_score = self.configs["score"]["bounding_box"]
       self.bounding_box_playfield = self.configs["playfield"]["bounding_box"]
+      self.bounding_box_preview = self.configs["preview"]["bounding_box"]
 
   def grab_and_write_image(self, bounding_box, numbering=0, postfix=""):
     image = self.grab_image(bounding_box)
@@ -37,6 +38,7 @@ class Check:
       self.grab_and_write_image(self.bounding_box_lines, numbering=counter, postfix="-lines")
       self.grab_and_write_image(self.bounding_box_score, numbering=counter, postfix="-score")
       self.grab_and_write_image(self.bounding_box_playfield, numbering=counter, postfix="-playfield")
+      self.grab_and_write_image(self.bounding_box_preview, numbering=counter, postfix="-preview")
       counter += 1
       time.sleep(intervall)
 

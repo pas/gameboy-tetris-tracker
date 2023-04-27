@@ -2,6 +2,59 @@ import numpy as np
 from PIL import Image, ImageOps, ImageStat
 import cv2
 
+class Tiler:
+  def __init__(self, nr_tiles_height, nr_tiles_width, image):
+    self.nr_tiles_height = nr_tiles_height
+    self.nr_tiles_width = nr_tiles_width
+    self.original_image = image
+    self._tile()
+
+    # adapted image height and width in pixel
+    self.image_height = self.adapted_image.shape[0]
+    self.image_width = self.adapted_image.shape[1]
+
+    # tile height and width in pixel
+    self.tile_height = int(self.image_height / self.nr_tiles_height)
+    self.tile_width = int(self.image_width / self.nr_tiles_width)
+
+    self.adapted_image = self._tile_image()
+
+  def _tile_image(self):
+    last_dimension = self.adapted_image.shape[-1]
+    return self.adapted_image.reshape(self.nr_tiles_height, self.tile_height,
+                                      self.nr_tiles_width, self.tile_width, last_dimension).swapaxes(1, 2)
+
+  def _tile(self):
+    """
+    Returns the tiled image. Resizes image
+    to fit to a proper tiling (every piece
+    the same size). The size of the image
+    before and after will therefore in many
+    cases be different. Expects image as
+    numpy array.
+    """
+    shape = self.original_image.shape
+    height = shape[0]
+    width = shape[1]
+
+    even_height = height % self.nr_tiles_height
+    even_width = width % self.nr_tiles_width
+
+    new_height = height + self.nr_tiles_height - even_height
+    new_width = width + self.nr_tiles_width - even_width
+
+    self.adapted_image = self.original_image.copy()
+
+    if(even_width > 0 or even_height > 0):
+      self.adapted_image =  np.array(Image.fromarray(self.adapted_image).resize((new_width, new_height), Image.Resampling.BILINEAR))
+
+    even_height = self.adapted_image.shape[0] % self.nr_tiles_height
+    even_width = self.adapted_image.shape[1] % self.nr_tiles_width
+
+    assert(even_height == 0)
+    assert(even_width == 0)
+
+
 class Tile:
   """
   A tile always gets rescaled to 24x24
@@ -76,11 +129,18 @@ class TileRecognizer:
   L_MINO = 3
   T_MINO = 4
   S_MINO = 5
+  I_MINO_SIMPLE = 6
 
   def __init__(self,):
     self.mino_array = self.create_mino_array()
 
-  def recognize(self, tile):
+  def recognize(self, tile, simplify_i_mino=False):
+    """
+    :param tile:
+    :param simplify_t_mino: Replaces all found T-minos
+    with the value of T_MINO_SIMPLE
+    :return:
+    """
     best_match = -99 # default is a white tile
     tile = Tile(tile)
 
@@ -88,6 +148,10 @@ class TileRecognizer:
     if (not tile.is_white()):
       template_matching_values = self.matching(tile.tile_image)
       best_match = np.argmax(template_matching_values)
+
+      if(simplify_i_mino and best_match > TileRecognizer.I_MINO_SIMPLE):
+        best_match = TileRecognizer.I_MINO_SIMPLE
+
       # Seems to be difficult for template matching
       # to correctly identify the L piece. Checking
       # for brightness and only decide between

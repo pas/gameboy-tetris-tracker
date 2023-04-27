@@ -9,7 +9,7 @@ import yaml
 import calculations
 from play_sounds import play_file
 import pathlib
-from playfield_processor import PlayfieldProcessor
+from playfield_processor import PlayfieldProcessor, PreviewProcessor
 
 # Use this if your tesseract excutable is not in PATH
 #pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -28,6 +28,7 @@ class Runner:
       self.bounding_box_lines = self.configs["lines"]["bounding_box"]
       self.bounding_box_score = self.configs["score"]["bounding_box"]
       self.bounding_box_playfield = self.configs["playfield"]["bounding_box"]
+      self.bounding_box_preview = self.configs["preview"]["bounding_box"]
 
   def grab_and_process_image(self, bouding_box):
     """
@@ -35,14 +36,18 @@ class Runner:
     """
     image = self.grab_image(bouding_box)
     image = self.add_border(image)
-    #cv2.imwrite(folder + 'screenshot.png', np.array(image))
     result = self.tess(image)
     return result
 
   def grab_and_process_playfield(self, bounding_box):
     image = self.grab_image(bounding_box)
     playfield = PlayfieldProcessor(image)
-    print(playfield.run())
+    return playfield.run()
+
+  def grab_and_process_preview(self, bounding_box):
+    image = self.grab_image(bounding_box)
+    preview = PreviewProcessor(image)
+    return preview.run(save_tiles=True)
 
   def grab_image(self, bounding_box):
     """
@@ -115,22 +120,25 @@ class Runner:
     while True:
       current_score = self.grab_and_process_image(self.bounding_box_score)
       current_lines = self.grab_and_process_image(self.bounding_box_lines)
-      self.grab_and_process_playfield(self.bounding_box_playfield)
+      current_playfield = self.grab_and_process_playfield(self.bounding_box_playfield)
+      current_preview = self.grab_and_process_preview(self.bounding_box_preview)
 
       if(debug):
         print(current_score)
         print(current_lines)
 
-      if current_score.isdigit() and current_lines.isdigit() and int(current_score) > accepted_score and int(current_lines) > accepted_lines:
+      # The check for >= is a little bit of false value prevention (not a good one though...)
+      if current_score.isdigit() and current_lines.isdigit() and int(current_score) >= accepted_score and int(current_lines) >= accepted_lines:
         accepted_lines = int(current_lines)
         accepted_score = int(current_score)
         print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))
 
-        csv_file.write(accepted_score, accepted_lines)
-        score_array.append(accepted_score)
-        lines_array.append(accepted_lines)
+        csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield)
 
-        self.show_plot(score_array, lines_array)
+        if(int(current_score) > accepted_score):
+          score_array.append(accepted_score)
+          lines_array.append(accepted_lines)
+          self.show_plot(score_array, lines_array)
 
       time.sleep(1)
 

@@ -1,8 +1,9 @@
 import unittest
-from playfield_processor import PlayfieldProcessor
+from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator
 from PIL import Image
 import numpy as np
-from tile_recognizer import TileRecognizer, Tile
+from tile_recognizer import TileRecognizer, Tile, Tiler
+from csvfile import CSVReader
 
 class TestPlayfieldProcessor(unittest.TestCase):
   def test_l_mino(self):
@@ -24,6 +25,65 @@ class TestPlayfieldProcessor(unittest.TestCase):
     tile_image = np.array(Image.open("test/debug/T-mino-1.png").convert('RGB'))
     tile = Tile(tile_image);
     tile.store("test/debug/T-mino-1-adapted.png")
+
+  def test_tiler(self):
+    image = np.array(Image.open("test/scenario-2-high-res.png").convert('RGB'))
+    tiler = Tiler(18, 12, image)
+    assert(tiler.adapted_image.shape[0] == 18)
+    assert(tiler.adapted_image.shape[1] == 12)
+    self.assertEqual(tiler.tile_height, 53)
+    self.assertEqual(tiler.tile_width, 53)
+
+  def test_preview_processor_z(self):
+    image = np.array(Image.open("test/z-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.Z_MINO)
+
+  def test_preview_processor_l(self):
+    image = np.array(Image.open("test/l-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.L_MINO)
+
+  def test_preview_processor_j(self):
+    image = np.array(Image.open("test/j-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.J_MINO)
+
+  def test_preview_processor_s(self):
+    image = np.array(Image.open("test/s-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.S_MINO)
+
+  def test_preview_processor_o(self):
+    image = np.array(Image.open("test/o-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.O_MINO)
+
+  def test_preview_processor_i(self):
+    image = np.array(Image.open("test/i-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.I_MINO_SIMPLE)
+
+  def test_preview_processor_t(self):
+    image = np.array(Image.open("test/t-tetromino-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    result = preview_processor.run()
+    self.assertEqual(result, TileRecognizer.T_MINO)
+
+  def test_playfield_recreator(self):
+    recreator = PlayfieldRecreator()
+    playfield = self.create_testing_array_s2()
+    recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
+
+  def test_csvreader(self):
+    reader = CSVReader("20230427103034")
+    reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
     image = np.array(Image.open(image_path).convert('RGBA'))

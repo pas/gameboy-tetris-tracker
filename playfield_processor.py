@@ -1,7 +1,83 @@
 import numpy as np
 from PIL import Image, ImageOps, ImageStat
 import cv2
-from tile_recognizer import TileRecognizer
+from tile_recognizer import TileRecognizer, Tiler
+
+class PlayfieldRecreator():
+  def __init__(self):
+    self.tiles = self._load_tiles()
+
+  def recreate(self, playfield_array, path):
+    for column_nr, column in enumerate(playfield_array):
+      for row_nr, tile_nr in enumerate(column):
+        if(tile_nr == -99):
+          tile_nr = 12
+        tile = self.tiles[tile_nr]
+        if(row_nr > 0):
+          row = np.concatenate((row,tile), axis=1)
+        else:
+          row = tile
+      if(column_nr > 0):
+        result = np.concatenate((result, row), axis=0)
+      else:
+        result = row
+
+    cv2.imwrite(path, result)
+
+    return result
+
+  def _open_image(self, path):
+    return np.array(Image.open(path).convert('RGB'))
+
+  def _load_tiles(self):
+    return [
+      self._open_image("images/tiles/81.png"), #j
+      self._open_image("images/tiles/82.png"), #z
+      self._open_image("images/tiles/83.png"), #o
+      self._open_image("images/tiles/84.png"), #l
+      self._open_image("images/tiles/85.png"), #t
+      self._open_image("images/tiles/86.png"), #s
+
+      self._open_image("images/tiles/80.png"), #t1
+      self._open_image("images/tiles/88.png"), #t2
+      self._open_image("images/tiles/89.png"), #t3
+      self._open_image("images/tiles/8A.png"), #t4
+      self._open_image("images/tiles/8B.png"), #i5
+      self._open_image("images/tiles/8F.png"), #i6
+
+      self._open_image("images/tiles/2F.png"), #white
+    ]
+
+class PreviewProcessor():
+  nr_of_tiles_height = 4
+  nr_of_tiles_width = 4
+
+  def __init__(self, image):
+    self.original_image = np.array(image)
+    self.tiled_image = self.tile_image()
+    self.recognicer = TileRecognizer()
+
+  def tile_image(self):
+    tiler = Tiler(PreviewProcessor.nr_of_tiles_height, PreviewProcessor.nr_of_tiles_width, self.original_image)
+    return tiler.adapted_image
+
+  def run(self, save_tiles=False):
+    result = []
+    for column_nr, column in enumerate(self.tiled_image):
+      for row_nr, tile in enumerate(column):
+        if(save_tiles):
+          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-preview-tile.png', tile)
+        result.append(self.recognicer.recognize(tile, simplify_i_mino=True))
+
+    unique = np.unique(result)
+
+    if(unique.shape[0] > 2):
+      print(result)
+
+    assert(unique.shape[0] == 2)
+    assert(unique[0] == -99)
+
+    return result[np.argmax(result)]
 
 class PlayfieldProcessor():
   needed_number_of_tiles_width = 12
@@ -18,29 +94,8 @@ class PlayfieldProcessor():
     Expects either array, ScreenShot object from mss or numpy array.
     """
     self.original_image = self.adapted_image = np.array(image)
-    self.tile_height, self.tile_width = self.get_dimensions()
     self.tiled_image = self.tile_image()
     self.recognicer = TileRecognizer()
-
-  def tile_image(self):
-    return self.adapted_image.reshape(self.needed_number_of_tiles_height, self.tile_height, self.needed_number_of_tiles_width, self.tile_width, 4).swapaxes(1,2)
-
-  def show_stats(self, image):
-    shape = image.shape
-    height = shape[0]
-    width = shape[1]
-
-    # Check if playfield can be divided evenly.
-    even_height = height % self.needed_number_of_tiles_height
-    even_width = width % self.needed_number_of_tiles_height
-    print("Even height: " + str(even_height))
-    print("Even width: " + str(even_width))
-
-    # The playfield consists of 18x10 tiles
-    number_of_tiles_height = height / self.needed_number_of_tiles_height
-    number_of_tiles_width = width / self.needed_number_of_tiles_width
-    print("Tile height: " + str(number_of_tiles_height))
-    print("Tile width: " + str(number_of_tiles_width))
 
   def run(self):
     result = []
@@ -54,39 +109,9 @@ class PlayfieldProcessor():
 
     return np.array(result).reshape(18, 10)
 
-  def get_dimensions(self):
-    """
-    Expects np.array (height,width,4)
-    So the image is expected to be in RGBA!
-
-    Stores tile_width and tile_height
-    """
-    shape = self.adapted_image.shape
-    height = shape[0]
-    width = shape[1]
-
-    even_height = height % self.needed_number_of_tiles_height
-    even_width = width % self.needed_number_of_tiles_width
-
-    new_height = height + self.needed_number_of_tiles_height - even_height
-    new_width = width + self.needed_number_of_tiles_width - even_width
-
-    if(even_width > 0 or even_height > 0):
-      self.adapted_image =  np.array(Image.fromarray(self.adapted_image).resize((new_width, new_height), Image.Resampling.BILINEAR))
-
-    self.show_stats(self.adapted_image)
-
-    height = self.adapted_image.shape[0]
-    width = self.adapted_image.shape[1]
-
-    self.show_stats(self.adapted_image)
-
-    # The playfield consists of 18x10 tiles
-    tile_height = int(height / self.needed_number_of_tiles_height)
-    tile_width = int(width / self.needed_number_of_tiles_width)
-
-    return tile_height, tile_width
-
+  def tile_image(self):
+    tiler = Tiler(self.needed_number_of_tiles_height, self.needed_number_of_tiles_width, self.original_image)
+    return tiler.adapted_image
 
 
 
