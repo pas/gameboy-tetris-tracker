@@ -23,6 +23,7 @@ class Runner:
     with open('config.yml', 'r') as config_file:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box = self.configs["bounding_box"]
+    self.csv_file = CSVWriter()
 
   def grab_and_process_playfield(self, bounding_box):
     image = self.grab_image(bounding_box)
@@ -91,9 +92,15 @@ class Runner:
       plt.close(fig)
 
   def preview(self, processor):
+    """
+    Returns -1 if results are ambigous
+    """
     preview_image = processor.get_preview()
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
-    return preview_processor.run()
+    result = preview_processor.run()
+    if(self.preview_processor.ambigous):
+      result = -1
+    return result
 
   def playfield(self, processor):
     playfield_image = processor.get_playfield()
@@ -119,21 +126,46 @@ class Runner:
     level_image = processor.get_level()
     return self.numbers(level_image)
 
-  def run(self, debug=False):
-    csv_file = CSVWriter()
+  def is_break(self, processor):
+    # this is a brittle hack. We just hope
+    # that not another combination of
+    # minos and whites return the same result
+    continue_image = processor.get_continue()
+    break_as_number = self.numbers(continue_image)
+    return break_as_number == 71006
+
+  def run(self, times=-99, debug=False):
     accepted_score = -1
     accepted_lines = -1
     score_array = []
     lines_array = []
+    previous_preview = -1
 
-    while True:
+    while times > 0 or times == -99: # Something like not processor.get_top_left_tile().is_black()
       image = self.grab_image(self.bounding_box)
       cv2.imwrite('test/current.png', np.array(image))
       processor = GameboyViewProcessor(image)
 
+      # Don't do anything user pressed break
+      if self.is_break(processor):
+        if (times > 0):
+          times -= 1
+        continue
+
       current_score = self.score(processor)
       current_lines = self.lines(processor)
       current_preview = self.preview(processor)
+      # If results are ambigous we assume that it is due
+      # to fading and just use the previous preview
+      if(current_preview == -1):
+        # If the previous preview does not exist
+        # then we skip this loop iteration assuming
+        # that the game is not ready yet
+        if(previous_preview == -1):
+          continue
+        else:
+          current_preview = previous_preview
+
       current_playfield = self.playfield(processor)
 
       if(debug):
@@ -146,14 +178,18 @@ class Runner:
         accepted_score = int(current_score)
         print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))
 
-        csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield)
+        self.csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield)
 
         if(int(current_score) > accepted_score):
           score_array.append(accepted_score)
           lines_array.append(accepted_lines)
           self.show_plot(score_array, lines_array)
 
+      previous_preview = current_preview
       time.sleep(1)
+
+      if(times > 0):
+        times -= 1
 
 
 if __name__ == "__main__":

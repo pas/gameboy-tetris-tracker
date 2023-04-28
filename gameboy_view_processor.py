@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from tile_recognizer import Tiler
+from tile_recognizer import Tiler, Tile
 
 
 class GameboyViewProcessor():
@@ -22,6 +22,12 @@ class GameboyViewProcessor():
       for column_nr, column in enumerate(self.tiled_image):
         for row_nr, tile in enumerate(column):
           cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-full-view-tile.png', tile)
+
+  def get_top_left_tile(self):
+    return Tile(self.tiled_image[0:1, 0:1].copy())
+
+  def get_continue(self):
+    return self.tiled_image[9:10, 3:11].copy()
 
   def get_playfield(self):
     return self.tiled_image[0:18,2:12].copy()

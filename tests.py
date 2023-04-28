@@ -8,9 +8,44 @@ from gameboy_image import GameboyImage
 from PIL import Image
 import numpy as np
 from tile_recognizer import TileRecognizer, Tile, Tiler
+from runner import Runner
 from csvfile import CSVReader
 
+class MockCSVWriter():
+    def __init__(self):
+        self.calls = 0
+
+    def write(self, accepted_score, accepted_lines, current_preview, current_playfield):
+        self.calls += 1
+
+# need to overwrite the grab_image
+# method to inject an image
+class TestRunner(Runner):
+    def __init__(self):
+        super().__init__()
+        self.csv_file = MockCSVWriter()
+
+    def grab_image(self, bounding_box):
+        return np.array(Image.open("test/gameboy-pause-full-view.png").convert('RGB'))
+
+    def calls(self):
+        return self.csv_file.calls
+
 class TestPlayfieldProcessor(unittest.TestCase):
+  def test_runner_on_pause(self):
+      runner = TestRunner()
+      runner.run(times=1)
+      # During pause the csv writer should not be called
+      self.assertEqual(runner.calls(),0)
+
+  def test_gameboy_view_processor_on_pause(self):
+      image = np.array(Image.open("test/gameboy-pause-full-view.png").convert('RGB'))
+      processor = GameboyViewProcessor(image)
+      continue_image = processor.get_continue()
+      gameboy_image = GameboyImage(continue_image, 8, 4, 53, 53, is_tiled=True)
+      gameboy_image.untile()
+      number_process = NumberProcessor(gameboy_image.image)
+      self.assertEqual(71006 ,number_process.get_number())
 
   def test_gameboy_image(self):
     processor = self.create_gameboy_view_processor()

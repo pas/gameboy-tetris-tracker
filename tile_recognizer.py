@@ -100,6 +100,26 @@ class Tile:
     stat = ImageStat.Stat(im)
     return stat.rms[0]
 
+  def is_black(self):
+    """
+    Expects a 3D-numpy-array [h, w, 3(rgb)]
+
+    Every tile that consists of more than
+    75% white pixels is considered as white.
+    This removes difficult edge cases and
+    make template matching slightly more precise
+    :return: true if 75% of the tile is white, false otherwise
+    """
+    image = self.tile_image.copy()
+    # Set one to zero
+    image[image == 1] = 0
+    # set everything black to 1
+    image[image == 0] = 1
+    # set everything lower than black to 0
+    image[image > 1] = 0
+    resolution = image.shape[0]*image.shape[1]*image.shape[2]
+    return np.sum(image)/resolution < 0.25
+
   def is_white(self):
     """
     Expects a 3D-numpy-array [h, w, 3(rgb)]
