@@ -5,7 +5,7 @@ import pytesseract
 import time
 from PIL import Image, ImageOps
 import yaml
-from playfield_processor import GameboyViewProcessor
+from gameboy_view_processor import GameboyViewProcessor
 
 
 # Use this if your tesseract excutable is not in PATH

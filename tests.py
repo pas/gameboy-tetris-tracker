@@ -1,5 +1,10 @@
 import unittest
-from playfield_processor import PlayfieldProcessor, PreviewProcessor, PlayfieldRecreator, GameboyViewProcessor, NumberProcessor, GameboyImage
+from playfield_processor import PlayfieldProcessor
+from preview_processor import PreviewProcessor
+from gameboy_view_processor import GameboyViewProcessor
+from number_processor import NumberProcessor
+from playfield_recreator import PlayfieldRecreator
+from gameboy_image import GameboyImage
 from PIL import Image
 import numpy as np
 from tile_recognizer import TileRecognizer, Tile, Tiler

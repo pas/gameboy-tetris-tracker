@@ -9,7 +9,11 @@ import yaml
 import calculations
 from play_sounds import play_file
 import pathlib
-from playfield_processor import PlayfieldProcessor, PreviewProcessor, GameboyViewProcessor, GameboyImage, NumberProcessor
+from playfield_processor import PlayfieldProcessor
+from preview_processor import PreviewProcessor
+from gameboy_view_processor import GameboyViewProcessor
+from number_processor import NumberProcessor
+from gameboy_image import GameboyImage
 import cv2
 
 # Use this if your tesseract excutable is not in PATH

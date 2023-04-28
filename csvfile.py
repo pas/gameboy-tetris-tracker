@@ -1,6 +1,6 @@
 import datetime
 import csv
-from playfield_processor import PlayfieldRecreator
+from playfield_recreator import PlayfieldRecreator
 import numpy as np
 
 class CSVReader:
