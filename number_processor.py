@@ -2,6 +2,8 @@ import numpy as np
 import pytesseract
 from PIL import Image, ImageOps
 
+# Use this if your tesseract excutable is not in PATH
+#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 class NumberProcessor():
   def __init__(self, image):

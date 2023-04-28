@@ -1,8 +1,6 @@
 import numpy as np
 from mss import mss
-import pytesseract
 import time
-from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from csvfile import CSVWriter
 import yaml
@@ -15,9 +13,6 @@ from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
 import cv2
-
-# Use this if your tesseract excutable is not in PATH
-#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 class Runner:
   sct = ""
@@ -160,11 +155,6 @@ class Runner:
 
       time.sleep(1)
 
-
-  def tess(self, image):
-    # Run tesseract in one-line mode (--psm=6)
-    # Use training data from tetris
-    return pytesseract.image_to_string(image, config=r'--dpi 252 --psm 6 --tessdata-dir .', lang="tetris").strip()
 
 if __name__ == "__main__":
   runner = Runner()
