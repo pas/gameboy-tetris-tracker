@@ -118,47 +118,60 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(tiler.tile_height, 53)
     self.assertEqual(tiler.tile_width, 53)
 
+  def test_preview_processor_ambigous(self):
+    image = np.array(Image.open("test/preview/t-to-l-tetromino-transition-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    preview_processor.run()
+    self.assertTrue(preview_processor.ambigous)
+
   def test_preview_processor_z(self):
     image = np.array(Image.open("test/preview/z-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.Z_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_l(self):
     image = np.array(Image.open("test/preview/l-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.L_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_j(self):
     image = np.array(Image.open("test/preview/j-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.J_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_s(self):
     image = np.array(Image.open("test/preview/s-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.S_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_o(self):
     image = np.array(Image.open("test/preview/o-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.O_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_i(self):
     image = np.array(Image.open("test/preview/i-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.I_MINO_SIMPLE)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_preview_processor_t(self):
     image = np.array(Image.open("test/preview/t-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
     result = preview_processor.run()
     self.assertEqual(result, TileRecognizer.T_MINO)
+    self.assertFalse(preview_processor.ambigous)
 
   def test_playfield_recreator(self):
     recreator = PlayfieldRecreator()
