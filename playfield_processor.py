@@ -24,12 +24,13 @@ class PlayfieldProcessor():
       self.tiled_image = self.tile_image()
     self.recognizer = TileRecognizer()
 
-  def run(self):
+  def run(self, save_tiles=False):
     result = []
 
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile in enumerate(column):
-        cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile)
+        if(save_tiles):
+          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile)
         result.append(self.recognizer.recognize(tile))
 
     return np.array(result).reshape(18, 10)
