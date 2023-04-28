@@ -1,27 +1,9 @@
-lines:
-  bounding_box:
-    top: 507
-    left: 4382
-    width: 174
-    height: 36
-score:
-  bounding_box:
-    top: 266
-    left: 4353
-    width: 232
-    height: 40
-playfield:
-  bounding_box:
-    top: 167
-    left: 3936
-    width: 414
-    height: 616
-preview:
-  bounding_box:
-    top: 611
-    left: 4417
-    width: 136
-    height: 138
+bounding_box:
+  top: 168
+  left: 3902
+  width: 688
+  height: 615
+
 
 
 

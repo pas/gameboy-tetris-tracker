@@ -9,31 +9,39 @@ class GameboyImage():
   Provides standard operations for
   a full or part gameboy screen image
   """
-  def __init__(self, image, nr_of_tiles_height, nr_of_tiles_width, is_tiled=True):
+  def __init__(self, image, nr_of_tiles_height, nr_of_tiles_width, tile_height, tile_width, is_tiled=True):
     """
     Image as numpy array.
     """
     self.image = image
     self.is_tiled = is_tiled
+    self.nr_of_tiles_height = nr_of_tiles_height
+    self.nr_of_tiles_width = nr_of_tiles_width
+    self.tile_height = tile_height
+    self.tile_width = tile_width
 
   def tile(self):
     """
     Tiles the image and returns it.
     """
     if(not self.is_tiled):
-      self._tile()
+      self.image = self._tile()
+      self.is_tiled = True
 
     return self.image
 
   def _tile(self):
-    self.image
+    last_dimension = self.image.shape[-1]
+    return self.image.reshape(self.nr_of_tiles_height, self.tile_height,
+                                      self.nr_of_tiles_width, self.tile_width, last_dimension).swapaxes(1, 2)
 
   def untile(self):
     """
     Untiles the image and returns it.
     """
     if(self.is_tiled):
-      self._untile()
+      self.image = self._untile()
+      self.is_tiled = False
 
     return self.image
 
@@ -44,10 +52,16 @@ class GameboyImage():
     tile_width = shape[2]
     tile_height = shape[3]
     color_channels = shape[4]
-    self.image = self.image.swapaxes(1, 2).reshape(nr_of_tiles_height * tile_height, nr_of_tiles_width * tile_width,
+    return self.image.swapaxes(1, 2).reshape(nr_of_tiles_height * tile_height, nr_of_tiles_width * tile_width,
                                         color_channels)
 
-
+  def save(self, path="", name="image", extension="png"):
+    if(not self.is_tiled):
+      cv2.imwrite(path + name + "." + extension, self.image)
+    else:
+      for column_nr, column in enumerate(self.image):
+        for row_nr, tile in enumerate(column):
+            cv2.imwrite(path + str(column_nr) + "-" + str(row_nr) + '-' + name + '.' + extension, tile)
 
 class PlayfieldRecreator():
   def __init__(self):
@@ -136,7 +150,7 @@ class GameboyViewProcessor():
           cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-full-view-tile.png', tile)
 
   def get_playfield(self):
-    return self.tiled_image[0:18,1:11].copy()
+    return self.tiled_image[0:18,2:12].copy()
 
   def get_preview(self):
     return self.tiled_image[13:17, 15:19].copy()
@@ -146,6 +160,9 @@ class GameboyViewProcessor():
 
   def get_lines(self):
     return self.tiled_image[10:11, 15:18].copy()
+
+  def get_level(self):
+    return self.tiled_image[7:8, 16:18].copy()
 
 class PreviewProcessor():
   nr_of_tiles_height = 4
@@ -183,7 +200,7 @@ class PreviewProcessor():
     return result[np.argmax(result)]
 
 class PlayfieldProcessor():
-  needed_number_of_tiles_width = 12
+  needed_number_of_tiles_width = 10
   needed_number_of_tiles_height = 18
   names = ["J-mino", "Z-mino", "O-mino", "L-mino", "T-mino", "S-mino",
            "I-top-vertical-mino", "I-center-vertical-mino", "I-bottom-vertical-mino",
@@ -192,13 +209,16 @@ class PlayfieldProcessor():
 
   # Probably better just pass the dimensions here and then pass the image in run phase
   # because it changes. Otherwise we always have to recreate everything...
-  def __init__(self, image):
+  def __init__(self, image, image_is_tiled=False):
     """
     Expects either array, ScreenShot object from mss or numpy array.
     """
     self.original_image = self.adapted_image = np.array(image)
-    self.tiled_image = self.tile_image()
-    self.recognicer = TileRecognizer()
+    if(image_is_tiled):
+      self.tiled_image = np.array(image)
+    else:
+      self.tiled_image = self.tile_image()
+    self.recognizer = TileRecognizer()
 
   def run(self):
     result = []
@@ -206,9 +226,7 @@ class PlayfieldProcessor():
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile in enumerate(column):
         cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile)
-        # Skip borders
-        if (not (row_nr == 0 or row_nr == 11)):
-          result.append(self.recognicer.recognize(tile))
+        result.append(self.recognizer.recognize(tile))
 
     return np.array(result).reshape(18, 10)
 

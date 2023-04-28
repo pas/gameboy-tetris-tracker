@@ -9,3 +9,4 @@
 /csv/*
 !/csv/example*
 /test/tiles/*
+/test/recreation/*
