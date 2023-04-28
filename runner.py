@@ -29,15 +29,6 @@ class Runner:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box = self.configs["bounding_box"]
 
-  def grab_and_process_image(self, bouding_box):
-    """
-    returns a string
-    """
-    image = self.grab_image(bouding_box)
-    image = self.add_border(image)
-    result = self.tess(image)
-    return result
-
   def grab_and_process_playfield(self, bounding_box):
     image = self.grab_image(bounding_box)
     playfield = PlayfieldProcessor(image)
@@ -55,11 +46,6 @@ class Runner:
     :return: mss ScreenShot object
     """
     return self.sct.grab(bounding_box)
-
-  def add_border(self, image_as_array):
-    bordered = Image.fromarray(np.array(image_as_array))
-    bordered = ImageOps.expand(bordered, border=10, fill='white')
-    return np.array(bordered)
 
   def add_slope(self, slope, ax):
     x_min, x_max = ax.get_xlim()
