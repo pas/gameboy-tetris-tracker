@@ -33,5 +33,9 @@ Do they show the preview box without any borders? Be aware that the preview box 
   
 The program is currently really sensitive to imprecise bounding boxes especially the playfield and the preview part. If it does not categorize the minos correctly then it is probably because of the bounding boxes.
 
+# Start tracker
+
+    python runner.py
+
 # Wanna play Gameboy Tetris?
 Join our discord server! https://discord.gg/TjrSDzmb
