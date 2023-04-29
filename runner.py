@@ -98,7 +98,7 @@ class Runner:
     preview_image = processor.get_preview()
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
     result = preview_processor.run()
-    if(self.preview_processor.ambigous):
+    if(preview_processor.ambigous):
       result = -1
     return result
 

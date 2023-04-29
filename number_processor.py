@@ -17,7 +17,12 @@ class NumberProcessor():
     return np.array(bordered)
 
   def _run(self):
-    return int(self._ocr(self.processed_image))
+    result = self._ocr(self.processed_image)
+    if(result.isdigit()):
+      result = int(result)
+    else:
+      result = None
+    return result
 
   def _ocr(self, image):
     # Run tesseract in one-line mode (--psm=6)
@@ -26,3 +31,6 @@ class NumberProcessor():
 
   def get_number(self):
     return self.number
+
+  def is_digit(self):
+    return(not self.number == None)

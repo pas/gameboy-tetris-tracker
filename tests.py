@@ -1,5 +1,5 @@
 import unittest
-from playfield_processor import PlayfieldProcessor
+from playfield_processor import PlayfieldProcessor, Playfield
 from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
@@ -32,6 +32,12 @@ class TestRunner(Runner):
         return self.csv_file.calls
 
 class TestPlayfieldProcessor(unittest.TestCase):
+  def test_playfield(self):
+    playfield = Playfield(self.create_testing_array_full_line())
+    self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [   3 ,   3 ,   3 ,   9 ,  10,  10,  11,   3,   3,   3 ])
+    playfield.full_row_replacement()
+    self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ])
+
   def test_runner_on_pause(self):
       runner = TestRunner()
       runner.run(times=1)
@@ -296,6 +302,27 @@ class TestPlayfieldProcessor(unittest.TestCase):
               [ -99 , -99 ,   0 , -99 , -99, -99, -99, -99, -99, -99 ],
               [   3 ,   3 ,   3 ,   9 ,  10,  10,  11, -99, -99, -99 ],
               [   3 , -99 , -99 ,   4 ,   4,   4, -99, -99, -99, -99 ],
+              [   4 , -99 , -99 , -99 ,   4, -99, -99,   1,   1, -99 ],
+              [   4 ,   4 , -99 ,   3 ,   3,   3, -99, -99,   1,   1 ],
+              [   4 , -99 , -99 ,   3 , -99, -99, -99, -99, -99,   4 ],
+              [   2 ,   2 , -99 ,   1 ,   1, -99, -99, -99,   4,   4 ],
+              [   2 ,   2 , -99 , -99 ,   1,   1, -99, -99, -99,   4 ] ]
+    return (np.array(array))
+
+  def create_testing_array_full_line(self):
+    array = [ [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99,  -99, -99, -99, -99, -99 ],
+              [   0 ,   0 ,   0 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 ,   0 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [   3 ,   3 ,   3 ,   9 ,  10,  10,  11,   3,   3,   3 ],
+              [   3 , -99 , -99 ,   4 ,   4,   4, -99,   3, -99, -99 ],
               [   4 , -99 , -99 , -99 ,   4, -99, -99,   1,   1, -99 ],
               [   4 ,   4 , -99 ,   3 ,   3,   3, -99, -99,   1,   1 ],
               [   4 , -99 , -99 ,   3 , -99, -99, -99, -99, -99,   4 ],

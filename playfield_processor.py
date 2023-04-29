@@ -2,6 +2,28 @@ import numpy as np
 import cv2
 from tile_recognizer import TileRecognizer, Tiler
 
+class Playfield():
+  def __init__(self, playfield_as_array):
+    self.playfield_array = playfield_as_array
+
+  def full_row_replacement(self):
+    # binarize array
+    array = self._binarize()
+    # then sum each row
+    summed_rows = np.sum(array, axis=1)
+    # get indices with full row (10)
+    self.playfield_array[summed_rows == 10] = -99
+
+  def _binarize(self):
+    """
+    Does create a binary array. Where 1 is
+    any mino and 0 is white
+    """
+    array = self.playfield_array.copy()
+    array[array > -99] = 1
+    array[array == -99] = 0
+    return array
+
 
 class PlayfieldProcessor():
   needed_number_of_tiles_width = 10
