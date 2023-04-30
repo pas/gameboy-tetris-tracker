@@ -248,7 +248,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230427212001")
+    reader = CSVReader("20230430224750", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
