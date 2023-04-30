@@ -110,15 +110,11 @@ class Tile:
     make template matching slightly more precise
     :return: true if 75% of the tile is white, false otherwise
     """
-    image = self.tile_image.copy()
-    # Set one to zero
-    image[image == 1] = 0
-    # set everything black to 1
-    image[image == 0] = 1
-    # set everything lower than black to 0
-    image[image > 1] = 0
-    resolution = image.shape[0]*image.shape[1]*image.shape[2]
-    return np.sum(image)/resolution < 0.25
+    image_sum = np.sum(self.tile_image, axis=-1)
+    image = np.zeros(image_sum.shape)
+    image[image_sum == 0] = 1
+    resolution = image.shape[0]*image.shape[1]
+    return np.sum(image)/resolution > 0.75
 
   def is_white(self):
     """

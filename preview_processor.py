@@ -42,9 +42,6 @@ class PreviewProcessor():
 
     unique = np.unique(result)
 
-    if(unique.shape[0] > 2):
-      print(result)
-
     # Another good check would be if there are not
     # exactly four minos
     if(not unique.shape[0] == 2 and unique[0] == -99):

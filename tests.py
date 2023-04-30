@@ -10,6 +10,7 @@ import numpy as np
 from tile_recognizer import TileRecognizer, Tile, Tiler
 from runner import Runner
 from csvfile import CSVReader
+import cv2
 
 class MockCSVWriter():
     def __init__(self):
@@ -73,7 +74,10 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(3, image.shape[4])
 
   def create_gameboy_view_processor(self):
-    image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
+    return self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
+
+  def create_gameboy_view_processor_with(self, path):
+    image = np.array(Image.open(path).convert('RGB'))
     return GameboyViewProcessor(image)
 
   def test_combine_gameboy_view_processor_and_other_processors(self):
@@ -84,32 +88,56 @@ class TestPlayfieldProcessor(unittest.TestCase):
     preview = preview_processor.run()
     self.assertEqual(preview, TileRecognizer.T_MINO)
 
-    score_image = processor.get_score()
-    score_image = GameboyImage(score_image, score_image.shape[0], score_image.shape[1],
-                               score_image.shape[2], score_image.shape[3], is_tiled=True)
-    score_image.save("test/")
-    score_image.untile()
-    number_processor = NumberProcessor(score_image.image)
-    score = number_processor.get_number()
+    score = self.get_score(processor)
     self.assertEqual(39, score)
 
-    lines_image = processor.get_lines()
-    lines_image = GameboyImage(lines_image, lines_image.shape[0], lines_image.shape[1],
-                               lines_image.shape[2], lines_image.shape[3], is_tiled=True)
-    lines_image.untile()
-    number_processor = NumberProcessor(lines_image.image)
-    lines = number_processor.get_number()
+    lines = self.get_lines(processor)
     self.assertEqual(0, lines)
 
-    level_image = processor.get_level()
-    level_image = GameboyImage(level_image, level_image.shape[0], level_image.shape[1],
-                               level_image.shape[2], level_image.shape[3], is_tiled=True)
-    level_image.untile()
-    number_processor = NumberProcessor(level_image.image)
-    level = number_processor.get_number()
+    level = self.get_level(processor)
     self.assertEqual(0, level)
 
     playfield_image = processor.get_playfield()
+
+  def get_level(self, processor):
+    level_image = processor.get_level()
+    level = self.get_number(level_image)
+    return level
+
+  def get_number(self, number_image, save_image=False):
+    number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
+                                number_image.shape[2], number_image.shape[3], is_tiled=True)
+    number_image.untile()
+    if(save_image):
+      cv2.imwrite("test/number.png", number_image.image)
+
+    number_processor = NumberProcessor(number_image.image)
+    level = number_processor.get_number()
+    return level
+
+  def get_lines(self, processor, save_image=False):
+    lines_image = processor.get_lines()
+    lines = self.get_number(lines_image, save_image)
+    return lines
+
+  def get_score(self, processor):
+    score_image = processor.get_score()
+    score = self.get_number(score_image)
+    return score
+
+  def test_problematic_score(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
+    self.assertEqual(99, self.get_score(processor))
+    self.assertEqual(0, self.get_lines(processor))
+    self.assertEqual(9, self.get_level(processor))
+
+  def test_problematic_score_2(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-lines.png")
+    self.assertEqual(9, self.get_lines(processor))
+
+  def test_problematic_lines(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-lines.png")
+    self.assertEqual(9, self.get_lines(processor, save_image=True))
 
   def test_gameboy_view_processor(self):
       processor = self.create_gameboy_view_processor()

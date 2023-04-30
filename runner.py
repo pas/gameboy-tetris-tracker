@@ -12,6 +12,7 @@ from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
+from tile_recognizer import Tile
 import cv2
 
 class Runner:
@@ -134,17 +135,31 @@ class Runner:
     break_as_number = self.numbers(continue_image)
     return break_as_number == 71006
 
-  def run(self, times=-99, debug=False):
+  def is_running(self, processor):
+    """
+    If the left top image is more or less
+    black, then the game shows is in
+    play state.
+    """
+    tile = processor.get_top_left_tile()
+    return tile.is_black()
+
+  def get_gameboy_view_processor(self):
+    image = self.grab_image(self.bounding_box)
+    cv2.imwrite('test/current.png', np.array(image))
+    return GameboyViewProcessor(image)
+
+  def new_game(self, times=-99, debug=False):
     accepted_score = -1
     accepted_lines = -1
     score_array = []
     lines_array = []
     previous_preview = -1
 
-    while times > 0 or times == -99: # Something like not processor.get_top_left_tile().is_black()
-      image = self.grab_image(self.bounding_box)
-      cv2.imwrite('test/current.png', np.array(image))
-      processor = GameboyViewProcessor(image)
+    processor = self.get_gameboy_view_processor()
+    while (
+        times > 0 or times == -99) and self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
+      processor = self.get_gameboy_view_processor()
 
       # Don't do anything user pressed break
       if self.is_break(processor):
@@ -153,22 +168,28 @@ class Runner:
         continue
 
       current_score = self.score(processor)
+
+      # This is a no good situation. Each score should get recognized :(
+      if (current_score == None):
+        current_score = accepted_score
+        print("this is bad. Score could not be recognized!")
+
       current_lines = self.lines(processor)
       current_preview = self.preview(processor)
       # If results are ambigous we assume that it is due
       # to fading and just use the previous preview
-      if(current_preview == -1):
+      if (current_preview == -1):
         # If the previous preview does not exist
         # then we skip this loop iteration assuming
         # that the game is not ready yet
-        if(previous_preview == -1):
+        if (previous_preview == -1):
           continue
         else:
           current_preview = previous_preview
 
       current_playfield = self.playfield(processor)
 
-      if(debug):
+      if (debug):
         print(current_score)
         print(current_lines)
 
@@ -180,7 +201,7 @@ class Runner:
 
         self.csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield)
 
-        if(int(current_score) > accepted_score):
+        if (int(current_score) > accepted_score):
           score_array.append(accepted_score)
           lines_array.append(accepted_lines)
           self.show_plot(score_array, lines_array)
@@ -188,13 +209,16 @@ class Runner:
       previous_preview = current_preview
       time.sleep(1)
 
-      if(times > 0):
+      if (times > 0):
         times -= 1
 
+  def run(self, times=-99, debug=False):
+    while True:
+      processor = self.get_gameboy_view_processor()
+      if(self.is_running(processor)):
+        self.csv_file = CSVWriter()
+        self.new_game(times, debug)
 
 if __name__ == "__main__":
   runner = Runner()
-  time.sleep(1)
-  audio_path = pathlib.Path("sounds/start-ready-go.wav")
-  play_file(audio_path)
   runner.run()
