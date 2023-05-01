@@ -25,7 +25,7 @@ class CSVReader:
       header = next(reader)
       for row in reader:
         playfield = eval(row[4])
-        self.recreator.recreate(np.array(playfield), path + row[1] + ".png")
+        self.recreator.recreate(np.array(playfield), path + row[0] + ".png")
 
 class CSVWriter:
   headers = ["time", "score", "lines", "preview", "playfield"]
@@ -40,7 +40,7 @@ class CSVWriter:
     Expects a numpy array as playfield
     """
     time = datetime.datetime.now()
-    self._write(score, lines, time.strftime("%Y/%m/%d %H:%M:%S"), preview, playfield.tolist())
+    self._write(score, lines, time.strftime("%Y/%m/%d %H:%M:%S.%f"), preview, playfield.tolist())
 
   def _write(self, score, lines, time, preview, playfield):
     with open(self.file_name, 'a+', newline='') as csv_file:
