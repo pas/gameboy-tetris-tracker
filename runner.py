@@ -26,16 +26,6 @@ class Runner:
       self.bounding_box = self.configs["bounding_box"]
     self.csv_file = CSVWriter()
 
-  def grab_and_process_playfield(self, bounding_box):
-    image = self.grab_image(bounding_box)
-    playfield = PlayfieldProcessor(image)
-    return playfield.run()
-
-  def grab_and_process_preview(self, bounding_box):
-    image = self.grab_image(bounding_box)
-    preview = PreviewProcessor(image)
-    return preview.run(save_tiles=True)
-
   def grab_image(self, bounding_box):
     """
     Returns mss ScreenShot object: https://python-mss.readthedocs.io/api.html#mss.base.ScreenShot
@@ -199,7 +189,7 @@ class Runner:
         accepted_score = int(current_score)
         print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))
 
-        self.csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield)
+        self.csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield.playfield_array)
 
         if (int(current_score) > accepted_score):
           score_array.append(accepted_score)

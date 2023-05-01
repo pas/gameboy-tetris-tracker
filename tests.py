@@ -33,11 +33,41 @@ class TestRunner(Runner):
         return self.csv_file.calls
 
 class TestPlayfieldProcessor(unittest.TestCase):
-  def test_playfield(self):
+  def test_playfield_replace_full_row(self):
     playfield = Playfield(self.create_testing_array_full_line())
     self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [   3 ,   3 ,   3 ,   9 ,  10,  10,  11,   3,   3,   3 ])
     playfield.full_row_replacement()
     self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ])
+
+  def test_playfield_count_minos(self):
+    playfield = Playfield(self.create_testing_array_full_line())
+    self.assertEqual(44, playfield.count_minos())
+
+  def test_playfield_all_but(self):
+    playfield1 = Playfield(self.create_testing_array_s2())
+    reduced_playfield = playfield1.all_but(TileRecognizer.L_MINO)
+    self.assertEquals(8, reduced_playfield.count_minos())
+
+  def test_playfield_compare(self):
+    playfield1 = Playfield(self.create_testing_array_s2())
+    playfield2 = Playfield(self.create_testing_array_s2_next_piece())
+
+    comparison_mino = playfield1.mino_difference(playfield2)
+    # There should be four new minos
+    self.assertEqual(4, comparison_mino)
+
+    playfield_difference = playfield2.playfield_difference(playfield1)
+    # L-piece is now on the left and previously occupied
+    # the space of the s piece. Which leaves a piece of
+    # the s-piece visible.
+    self.assertEqual(5, playfield_difference.count_minos())
+
+    playfield_difference = playfield1.playfield_difference(playfield2)
+
+    # The s-piece covers the l-piece an only leave one
+    # edge of the l-piece free
+    self.assertEqual(1, playfield_difference.count_minos())
+
 
   def test_runner_on_pause(self):
       runner = TestRunner()
@@ -254,9 +284,8 @@ class TestPlayfieldProcessor(unittest.TestCase):
   def full_image(self, image_path, test):
     image = np.array(Image.open(image_path).convert('RGBA'))
     playfield = PlayfieldProcessor(image)
-    result = playfield.run()
+    result = playfield.run().playfield_array
 
-    result = np.array(result).reshape(18, 10)
     difference = result - test
     hits = result.copy()
     # set edge cases to no tile
@@ -302,6 +331,30 @@ class TestPlayfieldProcessor(unittest.TestCase):
               [ -99 , -99 , -99 , -99 ,   2,   2, -99, -99, -99,   4 ],
               [ -99 , -99 , -99 , -99 ,   2,   2, -99,   5,   4,   4 ],
               [ -99 ,   2 ,   2 , -99 ,   5,   5, -99,   5,   5,   4 ],
+              [ -99 ,   2 ,   2 ,   5 ,   5, -99,   5,   5,   5, -99 ],
+              [ -99 , -99 ,   1 ,   1 , -99,   5,   5, -99, -99, -99 ],
+              [ -99 , -99 , -99 ,   1 ,   1,   1, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   1,   1, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   1, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   2,   2, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   2,   2, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   3,   3, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99,   3, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99,   3, -99, -99,   2,   2 ],
+              [ -99 , -99 , -99 , -99 ,   1,   1, -99, -99,   2,   2 ],
+              [ -99 , -99 ,   5 , -99 ,   6,   1,   1, -99,   2,   2 ] ]
+    return (np.array(array))
+
+  def create_testing_array_s2_next_piece(self):
+    """
+    This example was artificially created by hand
+    """
+    array = [ [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   5,   5, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 ,   5 ,   5, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 ,   2,   2, -99, -99, -99,   4 ],
+              [   3 ,   3 ,   3 , -99 ,   2,   2, -99,   5,   4,   4 ],
+              [   3 ,   2 ,   2 , -99 ,   5,   5, -99,   5,   5,   4 ],
               [ -99 ,   2 ,   2 ,   5 ,   5, -99,   5,   5,   5, -99 ],
               [ -99 , -99 ,   1 ,   1 , -99,   5,   5, -99, -99, -99 ],
               [ -99 , -99 , -99 ,   1 ,   1,   1, -99, -99, -99, -99 ],
