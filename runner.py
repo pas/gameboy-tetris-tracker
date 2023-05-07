@@ -14,27 +14,16 @@ from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
 from image_saver import ImageSaver
 from score_tracker import ScoreTracker, LinesTracker, PreviewTracker, PlayfieldTracker
-from tile_recognizer import Tile
+from capturer import MSSCapturer
 import cv2
 
 class Runner:
-  sct = ""
-  configs = ""
-
   def __init__(self, config_file="config.yml"):
-    self.sct = mss()
     with open('config.yml', 'r') as config_file:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box = self.configs["bounding_box"]
+      self.capturer = MSSCapturer(self.bounding_box)
     self.csv_file = CSVWriter()
-
-  def grab_image(self, bounding_box):
-    """
-    Returns mss ScreenShot object: https://python-mss.readthedocs.io/api.html#mss.base.ScreenShot
-    :param bounding_box:
-    :return: mss ScreenShot object
-    """
-    return self.sct.grab(bounding_box)
 
   def add_slope(self, slope, ax):
     x_min, x_max = ax.get_xlim()
@@ -137,8 +126,8 @@ class Runner:
     return tile.is_black()
 
   def get_gameboy_view_processor(self):
-    image = self.grab_image(self.bounding_box)
-    cv2.imwrite('test/current.png', np.array(image))
+    image = self.capturer.grab_image()
+    cv2.imwrite('screenshots/current.png', np.array(image))
     return GameboyViewProcessor(image)
 
   def new_game(self):
