@@ -7,11 +7,13 @@ import yaml
 import calculations
 from play_sounds import play_file
 import pathlib
-from playfield_processor import PlayfieldProcessor
+from playfield_processor import PlayfieldProcessor, Playfield
 from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
+from image_saver import ImageSaver
+from score_tracker import ScoreTracker, LinesTracker, PreviewTracker, PlayfieldTracker
 from tile_recognizer import Tile
 import cv2
 
@@ -139,75 +141,42 @@ class Runner:
     cv2.imwrite('test/current.png', np.array(image))
     return GameboyViewProcessor(image)
 
-  def new_game(self, times=-99, debug=False):
-    accepted_score = -1
-    accepted_lines = -1
-    score_array = []
-    lines_array = []
-    previous_preview = -1
+  def new_game(self):
+    score_tracker = ScoreTracker()
+    lines_tracker = LinesTracker()
+    preview_tracker = PreviewTracker()
+    playfield_tracker = PlayfieldTracker()
+    playfield_tracker.track(Playfield.empty())
 
+    saver = ImageSaver("test/debug/", "running")
     processor = self.get_gameboy_view_processor()
-    while (
-        times > 0 or times == -99) and self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
+    saver.save(processor.original_image)
+
+    while self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
       processor = self.get_gameboy_view_processor()
+      saver.save(processor.original_image)
 
       # Don't do anything user pressed break
       if self.is_break(processor):
-        if (times > 0):
-          times -= 1
         continue
 
-      current_score = self.score(processor)
+      score_tracker.track(self.score(processor))
+      lines_tracker.track(self.lines(processor))
+      preview_tracker.track(self.preview(processor))
+      playfield_tracker.track(self.playfield(processor))
 
-      # This is a no good situation. Each score should get recognized :(
-      if (current_score == None):
-        current_score = accepted_score
-        print("this is bad. Score could not be recognized!")
+      print("Score: " + str(score_tracker.last()) + " Lines: " + str(lines_tracker.last()))
 
-      current_lines = self.lines(processor)
-      current_preview = self.preview(processor)
-      # If results are ambigous we assume that it is due
-      # to fading and just use the previous preview
-      if (current_preview == -1):
-        # If the previous preview does not exist
-        # then we skip this loop iteration assuming
-        # that the game is not ready yet
-        if (previous_preview == -1):
-          continue
-        else:
-          current_preview = previous_preview
+      self.csv_file.write(score_tracker.last(), lines_tracker.last(), preview_tracker.last(), playfield_tracker.current.playfield_array)
 
-      current_playfield = self.playfield(processor)
+      time.sleep(0.05)
 
-      if (debug):
-        print(current_score)
-        print(current_lines)
-
-      # The check for >= is a little bit of false value prevention (not a good one though...)
-      if int(current_score) >= accepted_score and int(current_lines) >= accepted_lines:
-        accepted_lines = int(current_lines)
-        accepted_score = int(current_score)
-        print("Score: " + str(accepted_score) + " Lines: " + str(accepted_lines))
-
-        self.csv_file.write(accepted_score, accepted_lines, current_preview, current_playfield.playfield_array)
-
-        if (int(current_score) > accepted_score):
-          score_array.append(accepted_score)
-          lines_array.append(accepted_lines)
-          self.show_plot(score_array, lines_array)
-
-      previous_preview = current_preview
-      time.sleep(1)
-
-      if (times > 0):
-        times -= 1
-
-  def run(self, times=-99, debug=False):
+  def run(self):
     while True:
       processor = self.get_gameboy_view_processor()
       if(self.is_running(processor)):
         self.csv_file = CSVWriter()
-        self.new_game(times, debug)
+        self.new_game()
 
 if __name__ == "__main__":
   runner = Runner()

@@ -25,7 +25,8 @@ class CSVReader:
       header = next(reader)
       for row in reader:
         playfield = eval(row[4])
-        self.recreator.recreate(np.array(playfield), path + row[0] + ".png")
+        row[0] = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S.%f")
+        self.recreator.recreate(np.array(playfield), path + str(row[0].timestamp() * 1000) + ".png")
 
 class CSVWriter:
   headers = ["time", "score", "lines", "preview", "playfield"]

@@ -62,9 +62,11 @@ class Tile:
   STANDARD_WIDTH = 24
   STANDARD_HEIGHT = 24
 
-  def __init__(self, tile_image):
+  def __init__(self, tile_image, column_nr=None, row_nr=None):
     self.tile_image = np.array(Image.fromarray(tile_image).convert('RGB').resize((Tile.STANDARD_WIDTH,Tile.STANDARD_HEIGHT), Image.Resampling.BILINEAR))
     self._white_to_black_border()
+    self.column_nr = column_nr
+    self.row_nr = row_nr
 
   def store(self, path_and_name):
     cv2.imwrite(path_and_name, self.tile_image)
@@ -138,6 +140,11 @@ class Tile:
     self.tile_image = np.array(Image.fromarray(self.tile_image).resize((width, height), Image.Resampling.LANCZOS))
     return self
 
+  def get_max(self):
+    return np.argmax(np.sum(self.tile_image, axis=-1))
+  def get_min(self):
+    return np.argmin(np.sum(self.tile_image, axis=-1))
+
 class TileRecognizer:
   J_MINO = 0
   Z_MINO = 1
@@ -146,6 +153,7 @@ class TileRecognizer:
   T_MINO = 4
   S_MINO = 5
   I_MINO_SIMPLE = 6
+  EMPTY = -99
 
   def __init__(self,):
     self.mino_array = self.create_mino_array()

@@ -35,13 +35,35 @@ class TestRunner(Runner):
 class TestPlayfieldProcessor(unittest.TestCase):
   def test_playfield_replace_full_row(self):
     playfield = Playfield(self.create_testing_array_full_line())
+
+    #preconditions
     self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [   3 ,   3 ,   3 ,   9 ,  10,  10,  11,   3,   3,   3 ])
+    self.assertEqual(0, playfield.line_clear_count)
+
     playfield.full_row_replacement()
     self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ])
+    self.assertEqual(1, playfield.line_clear_count)
 
   def test_playfield_count_minos(self):
     playfield = Playfield(self.create_testing_array_full_line())
     self.assertEqual(44, playfield.count_minos())
+    playfield.full_row_replacement()
+    self.assertEqual(44, playfield.count_minos())
+    self.assertEqual(34, playfield.count_minos(without_cleared_lines=True))
+
+  def test_playfield_has_empty_line_at(self):
+    playfield = Playfield(self.create_testing_array_full_line())
+    playfield.full_row_replacement()
+    self.assertFalse(playfield.has_empty_line_at(10))
+    self.assertTrue(playfield.has_empty_line_at(11))
+    self.assertFalse(playfield.has_empty_line_at(12))
+
+  def test_playfield_equal(self):
+    playfield = Playfield(self.create_testing_array_full_line())
+    # Should be equal to itself
+    self.assertTrue(playfield.is_equal(playfield))
+    playfield2 = Playfield(self.create_testing_array_s2())
+    self.assertFalse(playfield.is_equal(playfield2))
 
   def test_playfield_all_but(self):
     playfield1 = Playfield(self.create_testing_array_s2())
@@ -109,6 +131,18 @@ class TestPlayfieldProcessor(unittest.TestCase):
   def create_gameboy_view_processor_with(self, path):
     image = np.array(Image.open(path).convert('RGB'))
     return GameboyViewProcessor(image)
+
+  def test_playfield_in_transition(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertTrue(playfield.in_transition)
+
+  def test_playfield_not_in_transition(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertFalse(playfield.in_transition)
 
   def test_combine_gameboy_view_processor_and_other_processors(self):
     processor = self.create_gameboy_view_processor()
@@ -187,7 +221,6 @@ class TestPlayfieldProcessor(unittest.TestCase):
       lines = processor.get_lines()
       self.assertEqual(lines.shape[0], 1)
       self.assertEqual(lines.shape[1], 3)
-
 
   def test_l_mino(self):
     recognizer = TileRecognizer()
@@ -278,7 +311,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230430224750", path="test/csv/")
+    reader = CSVReader("20230504171806", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):

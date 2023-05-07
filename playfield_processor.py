@@ -1,11 +1,20 @@
 import numpy as np
 import cv2
-from tile_recognizer import TileRecognizer, Tiler
+from tile_recognizer import TileRecognizer, Tiler, Tile
 from playfield_recreator import PlayfieldRecreator
 
 class Playfield():
-  def __init__(self, playfield_as_array):
+  # Using a method here so if the index for an empty
+  # field should change that this still works
+  @staticmethod
+  def empty():
+    return Playfield(np.full((PlayfieldProcessor.needed_number_of_tiles_height, PlayfieldProcessor.needed_number_of_tiles_width),
+                   TileRecognizer.EMPTY))
+
+  def __init__(self, playfield_as_array, in_transition=False):
     self.playfield_array = playfield_as_array
+    self.line_clear_count = 0
+    self.in_transition = in_transition
 
   def full_row_replacement(self):
     # binarize array
@@ -13,11 +22,27 @@ class Playfield():
     # then sum each row
     summed_rows = np.sum(array, axis=1)
     # get indices with full row (10)
+    self.line_clear_count = (summed_rows == 10).sum()
     self.playfield_array[summed_rows == 10] = -99
 
-  def count_minos(self):
+  def has_empty_line_at(self, line_number):
+    """
+    Line number has to be between 0 and 17
+    """
+    number_of_empty_spaces = (self.playfield_array[line_number] == TileRecognizer.EMPTY).sum()
+    return number_of_empty_spaces == PlayfieldProcessor.needed_number_of_tiles_width
+
+  def count_minos(self, without_cleared_lines=False):
+    """
+    This takes into account previously cleared lines.
+    Use without_cleared_lines if this is not
+    what you want.
+    """
     array = self.binarize()
-    return np.sum(array)
+    nr_of_minos_in_cleared_lines = 0
+    if(not without_cleared_lines):
+      nr_of_minos_in_cleared_lines =  self.line_clear_count * PlayfieldProcessor.needed_number_of_tiles_width
+    return np.sum(array) + nr_of_minos_in_cleared_lines
 
   def all_but(self, mino_index):
     """
@@ -36,6 +61,15 @@ class Playfield():
     is not the same as playfield2.mino_difference(playfield1)
     """
     return previous_playfield.count_minos()-self.count_minos()
+
+  def is_equal(self, previous_playfield):
+    """
+    This does not take into account the cleared
+    line. Calculates an exact playfield differenc
+    and it is zero then this is true
+    """
+    summed_difference = (self.playfield_array - previous_playfield.playfield_array).sum()
+    return summed_difference == 0
 
   def playfield_difference(self, previous_playfield):
     """
@@ -74,8 +108,6 @@ class PlayfieldProcessor():
             "I-left-horizontal-mino", "I-center-horizontal-mino", "I-right-horizontal-mino",
            "border left", "border bottom", "border right", "border top"]
 
-  # Probably better just pass the dimensions here and then pass the image in run phase
-  # because it changes. Otherwise we always have to recreate everything...
   def __init__(self, image, image_is_tiled=False):
     """
     Expects either array, ScreenShot object from mss or numpy array.
@@ -90,13 +122,21 @@ class PlayfieldProcessor():
   def run(self, save_tiles=False):
     result = []
 
+    in_transition = False
+
     for column_nr, column in enumerate(self.tiled_image):
-      for row_nr, tile in enumerate(column):
+      for row_nr, tile_image in enumerate(column):
         if(save_tiles):
           cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile)
-        result.append(self.recognizer.recognize(tile))
 
-    playfield = Playfield(np.array(result).reshape(18, 10))
+        tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
+        if(not tile.is_white()):
+          if(tile.get_min() > 300):
+            in_transition = True
+
+        result.append(self.recognizer.recognize(tile_image))
+
+    playfield = Playfield(np.array(result).reshape(18, 10), in_transition=in_transition)
     playfield.full_row_replacement()
 
     return playfield
