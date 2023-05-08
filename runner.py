@@ -1,3 +1,5 @@
+import timeit
+
 import numpy as np
 from mss import mss
 import time
@@ -87,7 +89,7 @@ class Runner:
   def playfield(self, processor):
     playfield_image = processor.get_playfield()
     playfield_processor = PlayfieldProcessor(playfield_image, image_is_tiled=True)
-    return playfield_processor.run()
+    return playfield_processor.run(return_on_transition=True)
 
   def numbers(self, number_image):
     number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
@@ -127,7 +129,6 @@ class Runner:
 
   def get_gameboy_view_processor(self):
     image = self.capturer.grab_image()
-    cv2.imwrite('screenshots/current.png', np.array(image))
     return GameboyViewProcessor(image)
 
   def new_game(self):
@@ -141,24 +142,37 @@ class Runner:
     processor = self.get_gameboy_view_processor()
     saver.save(processor.original_image)
 
+
     while self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
+      start_time = time.time()*1000
       processor = self.get_gameboy_view_processor()
       saver.save(processor.original_image)
 
       # Don't do anything user pressed break
       if self.is_break(processor):
+        if (time_passed < 50):
+          time.sleep((50 - time_passed) / 1000)
         continue
+
+      playfield = self.playfield(processor)
+      if(playfield == None):
+        # immediatly retake the image if we stumbled upon a transition
+        continue
+      playfield_tracker.track(playfield)
 
       score_tracker.track(self.score(processor))
       lines_tracker.track(self.lines(processor))
       preview_tracker.track(self.preview(processor))
-      playfield_tracker.track(self.playfield(processor))
+
 
       print("Score: " + str(score_tracker.last()) + " Lines: " + str(lines_tracker.last()))
 
       self.csv_file.write(score_tracker.last(), lines_tracker.last(), preview_tracker.last(), playfield_tracker.current.playfield_array)
 
-      time.sleep(0.05)
+      time_passed = time.time()*1000-start_time
+      print(time_passed)
+      if(time_passed < 50):
+        time.sleep((50-time_passed)/1000)
 
   def run(self):
     while True:

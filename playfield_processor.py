@@ -26,7 +26,7 @@ class Playfield():
     self.line_clear_count = (summed_rows == 10).sum()
     self.playfield_array[summed_rows == 10] = -99
 
-  def is_tetris(self):
+  def is_line_clear(self):
     return self.line_clear_count > 0
 
   def has_empty_line_at(self, line_number):
@@ -124,26 +124,34 @@ class PlayfieldProcessor():
       self.tiled_image = self.tile_image()
     self.recognizer = TileRecognizer()
 
-  def run(self, save_tiles=False):
+  def run(self, save_tiles=False, return_on_transition=False):
+    """
+    When return on transition then it
+    immediately returns if the playfield
+    is on transition. The return value
+    is None
+    """
     result = []
 
     in_transition = False
 
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile_image in enumerate(column):
-        if(save_tiles):
-          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile_image)
-
         tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
+
+        if (save_tiles):
+          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile.tile_image)
 
         if(not tile.is_white()):
           if(tile.get_min() > PlayfieldProcessor.THRESHHOLD):
             in_transition = True
+            if(return_on_transition):
+              return None
 
         # If we detect a one-colored non-white tile then
         # it's the tetris animation. We should probably
         # move this into the tile recognizer
-        if(not tile.is_black() and not tile.is_white() and tile.is_one_color()):
+        if(not tile.is_black() and not tile.is_white() and (tile.is_one_color() or tile.is_dull())):
           result.append(TileRecognizer.GREY)
         else:
           result.append(self.recognizer.recognize(tile_image))

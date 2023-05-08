@@ -103,6 +103,24 @@ class Tile:
     stat = ImageStat.Stat(im)
     return stat.rms[0]
 
+  def is_dull(self):
+    """
+    An image is dull if the difference of
+    the whitest pixel and the blackest
+    pixel is small.
+    For some error correction we remove 5%
+    of the whitest and 5% of the blackest
+    pixels.
+    """
+    greyed_image = np.array(Image.fromarray(self.tile_image).convert('L'))
+    count_of_pixels = greyed_image.shape[0] * greyed_image.shape[1]
+    five_percent_of_pixels = int(count_of_pixels*0.05)
+    unique_values, unique_count = np.unique(greyed_image, return_counts=True)
+    cumulative_sum_forward = np.cumsum(unique_count)
+    cumulative_sum_backward = np.flip(np.cumsum(np.flip(unique_count)))
+    reduced = unique_values[(cumulative_sum_forward > five_percent_of_pixels) & (cumulative_sum_backward > five_percent_of_pixels)]
+    return reduced[-1]-reduced[0] < 75
+
   def is_black(self):
     """
     Expects a 3D-numpy-array [h, w, 3(rgb)]
@@ -161,13 +179,11 @@ class Tile:
   def get_max(self):
     return np.argmax(np.sum(self.tile_image, axis=-1))
 
-  def get_min(self, shrink=True):
+  def get_min(self):
     """
     Sums each pixel up an returns the minimum
     value. More or less the value of the darkest
     pixel.
-    Use shrink to leaf out two pixels at each border
-    to make it slightly more error prove.
     """
     sum = np.sum(self.tile_image, axis=-1).flatten()
     res = np.argmin(sum)
@@ -181,7 +197,7 @@ class TileRecognizer:
   T_MINO = 4
   S_MINO = 5
   I_MINO_SIMPLE = 6
-  GREY = 7
+  GREY = 12
   EMPTY = -99
 
   def __init__(self,):

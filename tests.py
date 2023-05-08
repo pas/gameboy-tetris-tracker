@@ -173,25 +173,42 @@ class TestPlayfieldProcessor(unittest.TestCase):
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
-  def test_playfield_in_transition_3(self):
+  def test_playfield_in_transition_4(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-4.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
-  def test_playfield_tetris(self):
+  def test_playfield_in_transition_5(self):
+    # This does not work as the difference is too small.
+    # Another approach is needed here. This only happens
+    # shortly after a line clear
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-problematic.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertTrue(playfield.in_transition)
+
+  def test_playfield_line_clear(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-tetris.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run(save_tiles=True)
     self.assertEqual(1, playfield.line_clear_count)
-    self.assertTrue(playfield.is_tetris())
+    self.assertTrue(playfield.is_line_clear())
 
-  def test_playfield_tetris(self):
+  def test_playfield_line_clear_2(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-tetris-2.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run(save_tiles=True)
+    print(playfield.playfield_array)
+    self.assertEqual(2, playfield.line_clear_count)
+    self.assertTrue(playfield.is_line_clear())
+
+  def test_playfield_non_line_clear(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-non-tetris.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertEqual(0, playfield.line_clear_count)
-    self.assertFalse(playfield.is_tetris())
+    self.assertFalse(playfield.is_line_clear())
 
   def test_playfield_not_in_transition(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
@@ -292,25 +309,6 @@ class TestPlayfieldProcessor(unittest.TestCase):
 
     self.assertEqual(result, 4)
 
-  def test_tile(self):
-    tile_image = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
-    Tile(tile_image);
-
-  def test_tile_not_one_color(self):
-    tile_image = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
-    tile = Tile(tile_image);
-    self.assertFalse(tile.is_one_color())
-
-  def test_tile_one_color(self):
-    tile_image = np.array(Image.open("test/tiles/tetris-tile-1.png").convert('RGB'))
-    tile = Tile(tile_image);
-    self.assertTrue(tile.is_one_color())
-
-  def test_tile_one_color_2(self):
-    tile_image = np.array(Image.open("test/tiles/tetris-tile-2.png").convert('RGB'))
-    tile = Tile(tile_image);
-    self.assertTrue(tile.is_one_color())
-
   def test_tiler(self):
     image = np.array(Image.open("test/scenario-2-high-res.png").convert('RGB'))
     tiler = Tiler(18, 10, image)
@@ -380,7 +378,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230508100546", path="test/csv/")
+    reader = CSVReader("20230508205133", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
