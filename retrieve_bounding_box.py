@@ -2,6 +2,7 @@ import cv2
 from mss import mss
 from PIL import Image, ImageOps
 import numpy as np
+from image_manipulator import trim
 
 class BoundingBoxWidget(object):
     """
@@ -14,10 +15,13 @@ class BoundingBoxWidget(object):
     def __init__(self):
         sct = mss()
         monitor_screenshot = sct.grab(monitor=sct.monitors[0])
-        monitor_screenshot = np.array(monitor_screenshot)
+        monitor_screenshot = np.array(Image.fromarray(np.array(monitor_screenshot)).convert("RGB"))
 
         self.original_image = monitor_screenshot
         self.clone = self.original_image.copy()
+
+        print("Select by click and drag from the top left to the bottom right. Make sure there"
+              + "is a distiguishable black border around the image. This gives the best results.")
 
         cv2.namedWindow('image')
         cv2.setMouseCallback('image', self.extract_coordinates)
@@ -33,8 +37,22 @@ class BoundingBoxWidget(object):
         # Record ending (x,y) coordintes on left mouse button release
         elif event == cv2.EVENT_LBUTTONUP:
             self.image_coordinates.append((x,y))
+
+            print(self.image_coordinates)
+            cropped = self.crop()
+            _, top, bottom, left, right = trim(cropped)
+            self.image_coordinates[0] = (self.image_coordinates[0][0]+left, self.image_coordinates[0][1]+top)
+            self.image_coordinates[1] = (self.image_coordinates[1][0]-right, self.image_coordinates[1][1]-bottom)
+            print(self.image_coordinates)
+            print("corrections")
+            print(top, bottom, left, right)
             print('top left: {}, bottom right: {}'.format(self.image_coordinates[0], self.image_coordinates[1]))
-            print("top: {}\nleft: {}\nwidth: {}\nheight: {}".format(self.image_coordinates[0][1], self.image_coordinates[0][0], self.image_coordinates[1][0] - self.image_coordinates[0][0], self.image_coordinates[1][1] - self.image_coordinates[0][1]))
+            print("top: {}\nleft: {}\nwidth: {}\nheight: {}".format(self.image_coordinates[0][1],
+                                                                    self.image_coordinates[0][0],
+                                                                    self.image_coordinates[1][0] -
+                                                                    self.image_coordinates[0][0],
+                                                                    self.image_coordinates[1][1] -
+                                                                    self.image_coordinates[0][1]))
 
             # Draw rectangle
             cv2.rectangle(self.clone, self.image_coordinates[0], self.image_coordinates[1], (36,255,12), 2)
@@ -46,6 +64,11 @@ class BoundingBoxWidget(object):
 
     def show_image(self):
         return self.clone
+
+    def crop(self):
+        return self.clone[self.image_coordinates[0][1]:self.image_coordinates[1][1],
+                  self.image_coordinates[0][0]:self.image_coordinates[1][0]].copy()
+
 
 if __name__ == '__main__':
     boundingbox_widget = BoundingBoxWidget()

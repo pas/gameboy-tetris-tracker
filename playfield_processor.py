@@ -18,12 +18,16 @@ class Playfield():
 
   def full_row_replacement(self):
     # binarize array
-    array = self.binarize()
+    array =self.all_but(TileRecognizer.GREY).binarize()
+    #array = self.binarize()
     # then sum each row
     summed_rows = np.sum(array, axis=1)
     # get indices with full row (10)
     self.line_clear_count = (summed_rows == 10).sum()
     self.playfield_array[summed_rows == 10] = -99
+
+  def is_tetris(self):
+    return self.line_clear_count > 0
 
   def has_empty_line_at(self, line_number):
     """
@@ -101,6 +105,7 @@ class Playfield():
     recreator.recreate(self.playfield_array, path)
 
 class PlayfieldProcessor():
+  THRESHHOLD = 300
   needed_number_of_tiles_width = 10
   needed_number_of_tiles_height = 18
   names = ["J-mino", "Z-mino", "O-mino", "L-mino", "T-mino", "S-mino",
@@ -127,14 +132,21 @@ class PlayfieldProcessor():
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile_image in enumerate(column):
         if(save_tiles):
-          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile)
+          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile_image)
 
         tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
+
         if(not tile.is_white()):
-          if(tile.get_min() > 300):
+          if(tile.get_min() > PlayfieldProcessor.THRESHHOLD):
             in_transition = True
 
-        result.append(self.recognizer.recognize(tile_image))
+        # If we detect a one-colored non-white tile then
+        # it's the tetris animation. We should probably
+        # move this into the tile recognizer
+        if(not tile.is_black() and not tile.is_white() and tile.is_one_color()):
+          result.append(TileRecognizer.GREY)
+        else:
+          result.append(self.recognizer.recognize(tile_image))
 
     playfield = Playfield(np.array(result).reshape(18, 10), in_transition=in_transition)
     playfield.full_row_replacement()

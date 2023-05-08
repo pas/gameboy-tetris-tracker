@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from tile_recognizer import Tiler, Tile
+from image_manipulator import convert_4bitgrey_to_grey
 
 
 class GameboyViewProcessor():
@@ -21,7 +22,9 @@ class GameboyViewProcessor():
     if(save_tiles):
       for column_nr, column in enumerate(self.tiled_image):
         for row_nr, tile in enumerate(column):
-          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-full-view-tile.png', tile)
+          tile_image = Tile(tile).tile_image
+          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-full-view-tile.png',
+                      convert_4bitgrey_to_grey(tile_image))
 
   def get_top_left_tile(self):
     return Tile(np.squeeze(self.tiled_image[0:1, 0:1].copy()))

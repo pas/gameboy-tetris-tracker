@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image, ImageOps, ImageStat
 import cv2
+from image_manipulator import convert_to_4bitgrey
 
 class Tiler:
   def __init__(self, nr_tiles_height, nr_tiles_width, image):
@@ -63,8 +64,8 @@ class Tile:
   STANDARD_HEIGHT = 24
 
   def __init__(self, tile_image, column_nr=None, row_nr=None):
-    self.tile_image = np.array(Image.fromarray(tile_image).convert('RGB').resize((Tile.STANDARD_WIDTH,Tile.STANDARD_HEIGHT), Image.Resampling.BILINEAR))
-    self._white_to_black_border()
+    self.tile_image = np.array(Image.fromarray(tile_image).convert('RGB').resize((Tile.STANDARD_WIDTH, Tile.STANDARD_HEIGHT), Image.Resampling.BOX))
+    #self._white_to_black_border()
     self.column_nr = column_nr
     self.row_nr = row_nr
 
@@ -118,6 +119,23 @@ class Tile:
     resolution = image.shape[0]*image.shape[1]
     return np.sum(image)/resolution > 0.75
 
+  def is_one_color(self, threshhold=1):
+    """
+    Return if the tile consists of mostly (75%)
+    one color. Color here means the same grey
+    value.
+    We take into account close values. Values
+    that are max one value away.
+    """
+    image_sum = np.array(Image.fromarray(self.tile_image).convert('L'))
+    resolution = image_sum.shape[0] * image_sum.shape[1]
+    unique_values, unique = np.unique(image_sum, return_counts=True)
+    percent_appearance = unique/resolution
+    max_index = np.argmax(percent_appearance)
+    max_value = unique_values[max_index]
+    res = np.sum( percent_appearance[(unique_values <= max_value + threshhold) & (unique_values >= max_value - threshhold) ])
+    return res > 0.75
+
   def is_white(self):
     """
     Expects a 3D-numpy-array [h, w, 3(rgb)]
@@ -142,8 +160,18 @@ class Tile:
 
   def get_max(self):
     return np.argmax(np.sum(self.tile_image, axis=-1))
-  def get_min(self):
-    return np.argmin(np.sum(self.tile_image, axis=-1))
+
+  def get_min(self, shrink=True):
+    """
+    Sums each pixel up an returns the minimum
+    value. More or less the value of the darkest
+    pixel.
+    Use shrink to leaf out two pixels at each border
+    to make it slightly more error prove.
+    """
+    sum = np.sum(self.tile_image, axis=-1).flatten()
+    res = np.argmin(sum)
+    return sum[res]
 
 class TileRecognizer:
   J_MINO = 0
@@ -153,6 +181,7 @@ class TileRecognizer:
   T_MINO = 4
   S_MINO = 5
   I_MINO_SIMPLE = 6
+  GREY = 7
   EMPTY = -99
 
   def __init__(self,):

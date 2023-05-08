@@ -22,7 +22,7 @@ class CSVReader:
     """
     with open(self.get_full_path(), newline='') as csv_file:
       reader = csv.reader(csv_file, delimiter=";")
-      header = next(reader)
+      next(reader)
       for row in reader:
         playfield = eval(row[4])
         row[0] = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S.%f")

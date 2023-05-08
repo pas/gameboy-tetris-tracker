@@ -37,7 +37,7 @@ class PreviewProcessor():
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile in enumerate(column):
         if(save_tiles):
-          cv2.imwrite('test/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-preview-tile.png', tile)
+          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-preview-tile.png', tile)
         result.append(self.recognizer.recognize(tile, simplify_i_mino=True))
 
     unique = np.unique(result)

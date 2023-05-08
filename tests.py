@@ -11,6 +11,9 @@ from tile_recognizer import TileRecognizer, Tile, Tiler
 from runner import Runner
 from csvfile import CSVReader
 import cv2
+from capturer import OCVCapturer, MSSCapturer
+import yaml
+from image_manipulator import convert_to_4bitgrey
 
 class MockCSVWriter():
     def __init__(self):
@@ -33,6 +36,26 @@ class TestRunner(Runner):
         return self.csv_file.calls
 
 class TestPlayfieldProcessor(unittest.TestCase):
+  def test_cv_capturer(self):
+    capturer = OCVCapturer()
+
+  def test_image_manipulator(self):
+    image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
+    image = convert_to_4bitgrey(image)
+    print(image)
+    cv2.imwrite("screenshots/reduced_grey_scale.png", image)
+
+  def test_mss_capturer(self):
+    with open('config.yml', 'r') as config_file:
+      configs = yaml.safe_load(config_file)
+      bounding_box = configs["bounding_box"]
+
+    capturer = MSSCapturer(bounding_box)
+    image = capturer.grab_image()
+    cv2.imwrite("screenshots/non-trimmed.png", image)
+    image = capturer.trim(image)
+    cv2.imwrite("screenshots/trimmed.png", image)
+
   def test_playfield_replace_full_row(self):
     playfield = Playfield(self.create_testing_array_full_line())
 
@@ -138,6 +161,38 @@ class TestPlayfieldProcessor(unittest.TestCase):
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
+  def test_playfield_in_transition_2(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-2.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertTrue(playfield.in_transition)
+
+  def test_playfield_in_transition_3(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-3.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertTrue(playfield.in_transition)
+
+  def test_playfield_in_transition_3(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-4.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertTrue(playfield.in_transition)
+
+  def test_playfield_tetris(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-tetris.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run(save_tiles=True)
+    self.assertEqual(1, playfield.line_clear_count)
+    self.assertTrue(playfield.is_tetris())
+
+  def test_playfield_tetris(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-non-tetris.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertEqual(0, playfield.line_clear_count)
+    self.assertFalse(playfield.is_tetris())
+
   def test_playfield_not_in_transition(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
@@ -224,23 +279,37 @@ class TestPlayfieldProcessor(unittest.TestCase):
 
   def test_l_mino(self):
     recognizer = TileRecognizer()
-    tile = np.array(Image.open("test/debug/L-mino-1.png").convert('RGB'))
+    tile = np.array(Image.open("test/tiles/L-mino-1.png").convert('RGB'))
     result = recognizer.recognize(tile)
 
     self.assertEqual(result, 3)
 
   def test_t_mino(self):
     recognizer = TileRecognizer()
-    tile = np.array(Image.open("test/debug/T-mino-1.png").convert('RGB'))
+    tile = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
 
     result = recognizer.recognize(tile)
 
     self.assertEqual(result, 4)
 
   def test_tile(self):
-    tile_image = np.array(Image.open("test/debug/T-mino-1.png").convert('RGB'))
+    tile_image = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
+    Tile(tile_image);
+
+  def test_tile_not_one_color(self):
+    tile_image = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
     tile = Tile(tile_image);
-    tile.store("test/debug/T-mino-1-adapted.png")
+    self.assertFalse(tile.is_one_color())
+
+  def test_tile_one_color(self):
+    tile_image = np.array(Image.open("test/tiles/tetris-tile-1.png").convert('RGB'))
+    tile = Tile(tile_image);
+    self.assertTrue(tile.is_one_color())
+
+  def test_tile_one_color_2(self):
+    tile_image = np.array(Image.open("test/tiles/tetris-tile-2.png").convert('RGB'))
+    tile = Tile(tile_image);
+    self.assertTrue(tile.is_one_color())
 
   def test_tiler(self):
     image = np.array(Image.open("test/scenario-2-high-res.png").convert('RGB'))
@@ -311,14 +380,16 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230504171806", path="test/csv/")
+    reader = CSVReader("20230508100546", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
     image = np.array(Image.open(image_path).convert('RGBA'))
     playfield = PlayfieldProcessor(image)
     result = playfield.run().playfield_array
+    self.performance(result, test)
 
+  def performance(self, result, test):
     difference = result - test
     hits = result.copy()
     # set edge cases to no tile
@@ -351,11 +422,70 @@ class TestPlayfieldProcessor(unittest.TestCase):
       print(arr)
     self.assertEqual(0, performance, "Some miscategorized minos")
 
+  def test_full_view(self):
+    image = self.get_image("test/gameboy-full-view.png")
+    processor = GameboyViewProcessor(image)
+    playfield_image = processor.get_playfield()
+    playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
+    self.performance(playfield, self.create_testing_array_full_view())
+
+  def test_full_view_2(self):
+    image = self.get_image("test/gameboy-full-view-2.png")
+    processor = GameboyViewProcessor(image)
+    playfield_image = processor.get_playfield()
+    playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
+    self.performance(playfield, self.create_testing_array_full_view_2())
+
+  def get_image(self, path):
+    return cv2.imread(path)
+
   def test_second_scenario(self):
     self.full_image("test/scenario-2-high-res.png", self.create_testing_array_s2())
 
   def test_first_scenario(self):
     self.full_image("test/scenario-1-high-res.png", self.create_testing_array_s1())
+
+  def create_testing_array_full_view(self):
+    array = [[-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99,   1,   1, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99,   1,   1, -99, -99, -99, -99],
+             [  0,   0,   0, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99,   0, -99, -99, -99, -99, -99, -99, -99],
+             [  3,   3,   3,   9,  10,  10,  11, -99, -99, -99],
+             [  3, -99, -99,   4,   4,   4, -99, -99, -99, -99],
+             [  4, -99, -99, -99,   4, -99, -99,   1,   1, -99],
+             [  4,   4, -99,   3,   3,   3, -99, -99,   1,   1],
+             [  4, -99, -99,   3, -99, -99, -99, -99, -99,   4],
+             [  2,   2, -99,   1,   1, -99, -99, -99,   4,   4],
+             [  2,   2, -99, -99,   1,   1, -99, -99, -99,   4]]
+    return (np.array(array))
+
+  def create_testing_array_full_view_2(self):
+    array = [[-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99,   6, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99,   7, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99,   7, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99,   8, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99,   6],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99,   7],
+             [-99, -99, -99, -99,   5, -99, -99, -99, -99,   7],
+             [-99, -99, -99, -99,   5,   5, -99,   4, -99,   8],
+             [-99, -99,   3,   3,   3,   5,   4,   4,   2,   2],
+             [-99, -99,   3,   9,  10,  10,  11,   4,   2,   2]]
+    return (np.array(array))
 
   def create_testing_array_s2(self):
     array = [ [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
