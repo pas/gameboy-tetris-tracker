@@ -7,6 +7,8 @@ from playfield_recreator import PlayfieldRecreator
 from gameboy_image import GameboyImage
 from PIL import Image
 import numpy as np
+
+from score_tracker import PreviewTracker, PlayfieldTracker
 from tile_recognizer import TileRecognizer, Tile, Tiler
 from runner import Runner
 from csvfile import CSVReader
@@ -55,6 +57,42 @@ class TestPlayfieldProcessor(unittest.TestCase):
     cv2.imwrite("screenshots/non-trimmed.png", image)
     image = capturer.trim(image)
     cv2.imwrite("screenshots/trimmed.png", image)
+
+  def test_playfield_intersection(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+    runner = Runner()
+    playfield_before = runner.playfield(gv1)
+    playfield_after = runner.playfield(gv2)
+    res = playfield_before.intersection(playfield_after)
+    self.assertEqual(4,np.sum(res==5))
+    self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
+
+    # both direction should yield same result
+    res = playfield_after.intersection(playfield_before)
+    self.assertEqual(4,np.sum(res==5))
+    self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
+
+  def test_clean_playfield(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+    runner = Runner()
+    tracker = PlayfieldTracker()
+    playfield_unrelated = runner.playfield(gv1)
+    tracker.track(playfield_unrelated)
+    self.assertIsNone(tracker.clean_playfield())
+
+    playfield_before = runner.playfield(gv2)
+    tracker.track(playfield_before)
+    self.assertIsNone(tracker.clean_playfield())
+
+    playfield_after = runner.playfield(gv3)
+    tracker.track(playfield_after)
+    clean_board = tracker.clean_playfield()
+    self.assertEqual(4,np.sum(clean_board==5))
+    self.assertSequenceEqual([5,-99,5,5,-99,5], (clean_board[15:19, 8:10]).flatten().tolist())
+
 
   def test_playfield_replace_full_row(self):
     playfield = Playfield(self.create_testing_array_full_line())

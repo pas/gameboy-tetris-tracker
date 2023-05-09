@@ -3,23 +3,26 @@ import numpy as np
 
 from tile_recognizer import TileRecognizer, Tiler
 
-
-class PreviewProcessor():
-  nr_of_tiles_height = 4
-  nr_of_tiles_width = 4
-
-  def __init__(self, image, image_is_tiled=False):
+class AreaProcessor():
+  """
+  This processor recognizes if one piece (and
+  only one piece) can be found in a specific area.
+  """
+  def __init__(self, image, tiles_height, tiles_width, image_is_tiled=False):
     self.original_image = np.array(image)
     if(image_is_tiled):
       self.tiled_image = np.array(image)
     else:
       self.tiled_image = self.tile_image()
 
+    self.nr_of_tiles_height = tiles_height
+    self.nr_of_tiles_width = tiles_width
+
     self.recognizer = TileRecognizer()
     self.ambigous = True
 
   def tile_image(self):
-    tiler = Tiler(PreviewProcessor.nr_of_tiles_height, PreviewProcessor.nr_of_tiles_width, self.original_image)
+    tiler = Tiler(self.nr_of_tiles_height, self.nr_of_tiles_width, self.original_image)
     return tiler.adapted_image
 
   def run(self, save_tiles=False):
@@ -50,3 +53,11 @@ class PreviewProcessor():
       self.ambigous = False
 
     return result[np.argmax(result)]
+
+class PreviewProcessor(AreaProcessor):
+  def __init__(self, image, image_is_tiled=False):
+    super().__init__(image, 4, 4, image_is_tiled)
+
+class SpawningProcessor(AreaProcessor):
+  def __init__(self, image, image_is_tiled=False):
+    super().__init__(image, 2, 4, image_is_tiled)

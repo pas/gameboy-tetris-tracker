@@ -10,7 +10,7 @@ import calculations
 from play_sounds import play_file
 import pathlib
 from playfield_processor import PlayfieldProcessor, Playfield
-from preview_processor import PreviewProcessor
+from preview_processor import PreviewProcessor, SpawningProcessor
 from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
@@ -83,6 +83,14 @@ class Runner:
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
     result = preview_processor.run()
     if(preview_processor.ambigous):
+      result = -1
+    return result
+
+  def spawning(self, processor):
+    spawning_image = processor.get_spawning_area()
+    spawning_processor = SpawningProcessor(spawning_image, image_is_tiled=True)
+    result = spawning_processor.run()
+    if(spawning_processor.ambigous):
       result = -1
     return result
 

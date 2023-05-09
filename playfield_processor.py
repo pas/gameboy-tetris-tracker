@@ -106,7 +106,7 @@ class Playfield():
     as index, for example TileRecognizer.J_MINO
     """
     reduced = self.playfield_array.copy()
-    reduced[reduced != mino_index] = -99
+    reduced[reduced != mino_index] = TileRecognizer.EMPTY
     return Playfield(reduced)
 
   def mino_difference(self, previous_playfield):
@@ -117,6 +117,16 @@ class Playfield():
     is not the same as playfield2.mino_difference(playfield1)
     """
     return previous_playfield.count_minos()-self.count_minos()
+
+  def intersection(self, playfield):
+    intersection = self.playfield_array.copy()
+    intersection[self.binarize() & playfield.binarize() == 0] = TileRecognizer.EMPTY
+    return intersection
+
+  def difference(self, playfield):
+    difference = self.playfield_array.copy()
+    difference[self.binarize() & playfield.binarize() == 1] = TileRecognizer.EMPTY
+    return Playfield(difference)
 
   def is_equal(self, previous_playfield):
     """

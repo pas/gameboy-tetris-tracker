@@ -32,6 +32,9 @@ class GameboyViewProcessor():
   def get_continue(self):
     return self.tiled_image[9:10, 3:11].copy()
 
+  def get_spawning_area(self):
+    return self.tiled_image[1:3, 5:9].copy()
+
   def get_playfield(self):
     return self.tiled_image[0:18,2:12].copy()
 

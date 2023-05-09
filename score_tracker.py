@@ -8,8 +8,32 @@ class SimpleTracker:
     self.current = value
 
 class PlayfieldTracker(SimpleTracker):
+  def __init__(self):
+    super().__init__()
+    self.current = None
+    self.previous = None
+    self.clean = None
+
   def track(self, playfield):
     super().track(playfield)
+
+  def clean_playfield(self):
+    """
+    Returns a playfield that has no falling
+    piece on it. Returns None if not
+    two playfields exists or no clean
+    playfield could be found. If this does
+    not suceed it simply returns the last
+    clean playfield
+    """
+    if(self.previous):
+      difference = self.previous.difference(self.current)
+      if (difference.count_minos()==4):
+        self.clean = self.current.intersection(self.previous)
+      return self.clean
+    else:
+      return None
+
 
   def _accept(self, playfield):
     mino_difference = self.current.mino_difference(playfield)
@@ -67,7 +91,22 @@ class Tracker:
     return len(self.array) == 0
 
   def last(self):
-    return self.array[len(self.array) - 1]
+    """
+    Returns always None if there is no value stored
+    """
+    if(len(self.array) > 0):
+      return self.array[len(self.array) - 1]
+    else:
+      return None
+
+  def has_changed(self):
+    """
+    Returns always false if there is only one value stored.
+    """
+    if(len(self.array) > 1):
+      return self.array[len(self.array)-1] != self.array[len(self.array)-2]
+    else:
+      return False
 
 class LargerOrEqualTracker(Tracker):
   def track(self, value):
