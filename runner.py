@@ -7,17 +7,8 @@ import matplotlib.pyplot as plt
 from csvfile import CSVWriter
 import yaml
 import calculations
-from play_sounds import play_file
-import pathlib
-from playfield_processor import PlayfieldProcessor, Playfield
-from preview_processor import PreviewProcessor, SpawningProcessor
-from gameboy_view_processor import GameboyViewProcessor
-from number_processor import NumberProcessor
-from gameboy_image import GameboyImage
-from image_saver import ImageSaver
-from score_tracker import ScoreTracker, LinesTracker, PreviewTracker, PlayfieldTracker, LevelTracker
+from game import Game
 from capturer import MSSCapturer
-import cv2
 
 class Runner:
   def __init__(self, config_file="config.yml"):
@@ -75,122 +66,17 @@ class Runner:
       fig.savefig(r'plots/test.png')
       plt.close(fig)
 
-  def preview(self, processor):
-    """
-    Returns -1 if results are ambigous
-    """
-    preview_image = processor.get_preview()
-    preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
-    result = preview_processor.run()
-    if(preview_processor.ambigous):
-      result = -1
-    return result
-
-  def spawning(self, processor):
-    spawning_image = processor.get_spawning_area()
-    spawning_processor = SpawningProcessor(spawning_image, image_is_tiled=True)
-    result = spawning_processor.run()
-    if(spawning_processor.ambigous):
-      result = -1
-    return result
-
-  def playfield(self, processor):
-    playfield_image = processor.get_playfield()
-    playfield_processor = PlayfieldProcessor(playfield_image, image_is_tiled=True)
-    return playfield_processor.run(return_on_transition=True)
-
-  def numbers(self, number_image):
-    number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
-                               number_image.shape[2], number_image.shape[3], is_tiled=True)
-    number_image.untile()
-    number_processor = NumberProcessor(number_image.image)
-    return number_processor.get_number()
-
-  def score(self, processor):
-    score_image = processor.get_score()
-    return self.numbers(score_image)
-
-  def lines(self, processor):
-    lines_image = processor.get_lines()
-    return self.numbers(lines_image)
-
-  def level(self, processor):
-    level_image = processor.get_level()
-    return self.numbers(level_image)
-
-  def is_break(self, processor):
-    # this is a brittle hack. We just hope
-    # that not another combination of
-    # minos and whites return the same result
-    continue_image = processor.get_continue()
-    break_as_number = self.numbers(continue_image)
-    return break_as_number == 71006
-
-  def is_running(self, processor):
-    """
-    If the left top image is more or less
-    black, then the game shows is in
-    play state.
-    """
-    tile = processor.get_top_left_tile()
-    return tile.is_black()
-
-  def get_gameboy_view_processor(self):
-    image = self.capturer.grab_image()
-    return GameboyViewProcessor(image)
-
-  def new_game(self):
-    score_tracker = ScoreTracker()
-    lines_tracker = LinesTracker()
-    level_tracker = LevelTracker()
-    preview_tracker = PreviewTracker()
-    playfield_tracker = PlayfieldTracker()
-    playfield_tracker.track(Playfield.empty())
-
-    saver = ImageSaver("test/debug/", "running")
-    processor = self.get_gameboy_view_processor()
-    saver.save(processor.original_image)
-
-    while self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
-      start_time = time.time()*1000
-      processor = self.get_gameboy_view_processor()
-
-      # Don't do anything user pressed break
-      if self.is_break(processor):
-        if (time_passed < 50):
-          time.sleep((50 - time_passed) / 1000)
-        continue
-
-      # This uses up time. We could make it faster
-      # by not saving every image
-      saver.save(processor.original_image)
-
-      playfield = self.playfield(processor)
-      if(playfield == None):
-        # immediately retake the image if we stumbled upon a transition
-        continue
-      playfield_tracker.track(playfield)
-
-      score_tracker.track(self.score(processor))
-      lines_tracker.track(self.lines(processor))
-      preview_tracker.track(self.preview(processor))
-      level_tracker.track(self.level(processor))
-
-      print("Score: " + str(score_tracker.last()) + " Lines: " + str(lines_tracker.last()))
-
-      self.csv_file.write(score_tracker.last(), lines_tracker.last(), level_tracker.last(), preview_tracker.last(), playfield_tracker.current.playfield_array)
-
-      time_passed = time.time()*1000-start_time
-      print("Used time for one round: " + str(time_passed))
-      if(time_passed < 50):
-        time.sleep((50-time_passed)/1000)
 
   def run(self):
+    """
     while True:
       processor = self.get_gameboy_view_processor()
       if(self.is_running(processor)):
         self.csv_file = CSVWriter()
         self.new_game()
+    """
+    game = Game(self.capturer)
+    game.start()
 
 if __name__ == "__main__":
   runner = Runner()
