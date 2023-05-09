@@ -15,7 +15,7 @@ from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
 from gameboy_image import GameboyImage
 from image_saver import ImageSaver
-from score_tracker import ScoreTracker, LinesTracker, PreviewTracker, PlayfieldTracker
+from score_tracker import ScoreTracker, LinesTracker, PreviewTracker, PlayfieldTracker, LevelTracker
 from capturer import MSSCapturer
 import cv2
 
@@ -134,6 +134,7 @@ class Runner:
   def new_game(self):
     score_tracker = ScoreTracker()
     lines_tracker = LinesTracker()
+    level_tracker = LevelTracker()
     preview_tracker = PreviewTracker()
     playfield_tracker = PlayfieldTracker()
     playfield_tracker.track(Playfield.empty())
@@ -142,11 +143,9 @@ class Runner:
     processor = self.get_gameboy_view_processor()
     saver.save(processor.original_image)
 
-
     while self.is_running(processor):  # Something like not processor.get_top_left_tile().is_black()
       start_time = time.time()*1000
       processor = self.get_gameboy_view_processor()
-      saver.save(processor.original_image)
 
       # Don't do anything user pressed break
       if self.is_break(processor):
@@ -154,23 +153,27 @@ class Runner:
           time.sleep((50 - time_passed) / 1000)
         continue
 
+      # This uses up time. We could make it faster
+      # by not saving every image
+      saver.save(processor.original_image)
+
       playfield = self.playfield(processor)
       if(playfield == None):
-        # immediatly retake the image if we stumbled upon a transition
+        # immediately retake the image if we stumbled upon a transition
         continue
       playfield_tracker.track(playfield)
 
       score_tracker.track(self.score(processor))
       lines_tracker.track(self.lines(processor))
       preview_tracker.track(self.preview(processor))
-
+      level_tracker.track(self.level(processor))
 
       print("Score: " + str(score_tracker.last()) + " Lines: " + str(lines_tracker.last()))
 
-      self.csv_file.write(score_tracker.last(), lines_tracker.last(), preview_tracker.last(), playfield_tracker.current.playfield_array)
+      self.csv_file.write(score_tracker.last(), lines_tracker.last(), level_tracker.last(), preview_tracker.last(), playfield_tracker.current.playfield_array)
 
       time_passed = time.time()*1000-start_time
-      print(time_passed)
+      print("Used time for one round: " + str(time_passed))
       if(time_passed < 50):
         time.sleep((50-time_passed)/1000)
 

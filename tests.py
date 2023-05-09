@@ -74,6 +74,48 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(44, playfield.count_minos())
     self.assertEqual(34, playfield.count_minos(without_cleared_lines=True))
 
+  def test_playfield_empty(self):
+    empty = Playfield.empty()
+    self.assertEqual(10, empty.playfield_array.shape[1])
+    self.assertEqual(18, empty.playfield_array.shape[0])
+    self.assertTrue(np.sum(empty.playfield_array[empty.playfield_array != -99]) == 0)
+
+  def test_playfield_checkerboard_mask(self):
+    checker = Playfield.checkerboard_mask()
+    self.assertEqual(10, checker.shape[1])
+    self.assertEqual(18, checker.shape[0])
+    checker2 = Playfield.checkerboard_mask(start=0)
+    self.assertTrue(np.sum(checker & checker2) == 0)
+    self.assertTrue(np.sum(checker | checker2) == 180)
+
+  def test_surface_trace(self):
+    playfield2 = Playfield(self.create_testing_array_high_parity())
+    trace = playfield2.surface_trace()
+    self.assertSequenceEqual(trace.tolist(), [0,0,1,1,-1,-1,1,1,-1])
+
+  def test_surface_trace_2(self):
+    playfield2 = Playfield(self.create_testing_array_s2_without_dropping_piece())
+    trace = playfield2.surface_trace()
+    self.assertSequenceEqual(trace.tolist(), [13, 0, -1, 3, 0, -3, 2, 0, 1])
+
+  def test_possibilities_2(self):
+    playfield2 = Playfield(self.create_testing_array_s2_without_dropping_piece())
+    res = playfield2.possibilities()
+    self.assertSequenceEqual(res.tolist(), [ 3,  4,  5,  7,  8, 11, 14, 15, 19, 21, 22])
+
+  def test_possibilities_3(self):
+    playfield = Playfield.empty()
+    res = playfield.possibilities()
+    # on an empty board S (14) and Z (10) are not ideal
+    self.assertSequenceEqual(res.tolist(), [2, 3, 5, 6, 8, 20, 22])
+
+  def test_parity(self):
+    playfield = Playfield(self.create_testing_array_s2())
+    self.assertEqual(0, playfield.parity())
+
+    playfield2 = Playfield(self.create_testing_array_high_parity())
+    self.assertEqual(4, playfield2.parity())
+
   def test_playfield_has_empty_line_at(self):
     playfield = Playfield(self.create_testing_array_full_line())
     playfield.full_row_replacement()
@@ -506,6 +548,27 @@ class TestPlayfieldProcessor(unittest.TestCase):
               [ -99 , -99 ,   5 , -99 ,   6,   1,   1, -99,   2,   2 ] ]
     return (np.array(array))
 
+  def create_testing_array_s2_without_dropping_piece(self):
+    array = [[-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 2, 2, -99, -99, -99, 4],
+             [-99, -99, -99, -99, 2, 2, -99, 5, 4, 4],
+             [-99, 2, 2, -99, 5, 5, -99, 5, 5, 4],
+             [-99, 2, 2, 5, 5, -99, 5, 5, 5, -99],
+             [-99, -99, 1, 1, -99, 5, 5, -99, -99, -99],
+             [-99, -99, -99, 1, 1, 1, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 1, 1, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 1, -99, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 2, 2, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 2, 2, -99, -99, -99, -99],
+             [-99, -99, -99, -99, 3, 3, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, 3, -99, -99, -99, -99],
+             [-99, -99, -99, -99, -99, 3, -99, -99, 2, 2],
+             [-99, -99, -99, -99, 1, 1, -99, -99, 2, 2],
+             [-99, -99, 5, -99, 6, 1, 1, -99, 2, 2]]
+    return (np.array(array))
+
   def create_testing_array_s2_next_piece(self):
     """
     This example was artificially created by hand
@@ -549,6 +612,27 @@ class TestPlayfieldProcessor(unittest.TestCase):
               [   4 , -99 , -99 ,   3 , -99, -99, -99, -99, -99,   4 ],
               [   2 ,   2 , -99 ,   1 ,   1, -99, -99, -99,   4,   4 ],
               [   2 ,   2 , -99 , -99 ,   1,   1, -99, -99, -99,   4 ] ]
+    return (np.array(array))
+
+  def create_testing_array_high_parity(self):
+    array = [ [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],
+              [-99, -99, -99, -99,   4, -99, -99, -99,   4, -99],
+              [-99, -99, -99,   4,   4,   4, -99,   4,   4,   4], ]
     return (np.array(array))
 
   def create_testing_array_full_line(self):

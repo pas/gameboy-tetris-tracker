@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from tile_recognizer import TileRecognizer, Tiler, Tile
+from tile_recognizer import TileRecognizer, Tiler, Tile, TetrominoTransmission, Tetromino
 from playfield_recreator import PlayfieldRecreator
 
 class Playfield():
@@ -10,6 +10,21 @@ class Playfield():
   def empty():
     return Playfield(np.full((PlayfieldProcessor.needed_number_of_tiles_height, PlayfieldProcessor.needed_number_of_tiles_width),
                    TileRecognizer.EMPTY))
+
+  @staticmethod
+  def checkerboard_mask(start=1):
+    """
+    Either start=1 or start=0. Everything
+    else creates non-sensical data.
+    """
+    x = np.zeros((PlayfieldProcessor.needed_number_of_tiles_height, PlayfieldProcessor.needed_number_of_tiles_width), dtype=bool)
+    x[0::2, 1::2] = 1
+    x[1::2, 0::2] = 1
+
+    if(start==0):
+      x = np.roll(x, 1, axis=1)
+
+    return x
 
   def __init__(self, playfield_as_array, in_transition=False):
     self.playfield_array = playfield_as_array
@@ -28,6 +43,43 @@ class Playfield():
 
   def is_line_clear(self):
     return self.line_clear_count > 0
+
+  def surface_trace(self):
+    binarized = self.binarize()
+    # fill gaps with any number
+    rotated = np.rot90(binarized).cumsum(axis=-1)
+    # replace numbers back to ones
+    rotated[rotated > 0] = 1
+    # sum together to get height
+    rotated = np.cumsum(rotated, axis=-1)
+    # rotated and subtract n1-n2, n2-n3, etc.
+    trace = np.flip(np.max(rotated, axis=-1))
+    diff = np.diff(trace)
+    return diff
+
+  def possibilities(self):
+    trace = self.surface_trace()
+    possibilities = []
+    l1_surface = Tetromino.get_surface_array_l1()
+    possibilities.append(TetrominoTransmission.I_TETROMINO)
+    l2_surface = Tetromino.get_surface_array_l2()
+    select_l2 = None
+    for value in trace:
+      if(value <= 2 and value >= -2):
+        possibilities += l1_surface[value]
+        if(select_l2):
+          possibilities += select_l2[value]
+        select_l2 = l2_surface[value]
+      else:
+        # Throw away previous selection if noting can fit
+        select_l2 = None
+    return np.unique(np.array(possibilities))
+
+  def parity(self):
+    mask1 = Playfield.checkerboard_mask()
+    mask2 = Playfield.checkerboard_mask(start=0)
+    binarized = self.binarize()
+    return np.abs(np.sum(binarized[mask1])-np.sum(binarized[mask2]))
 
   def has_empty_line_at(self, line_number):
     """

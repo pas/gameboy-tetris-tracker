@@ -92,6 +92,11 @@ class LinesTracker(LargerOrEqualTracker):
   def track(self, lines):
     super().track(lines)
 
+class LevelTracker(LargerOrEqualTracker):
+  # This is just to make the code clear
+  def track(self, level):
+    super().track(level)
+
 class PreviewTracker(Tracker):
   # This is just to make the code clear
   def track(self, preview):
