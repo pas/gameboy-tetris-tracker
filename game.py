@@ -1,5 +1,7 @@
 import time
 
+import numpy as np
+
 from csvfile import CSVWriter
 from gameboy_image import GameboyImage
 from gameboy_view_processor import GameboyViewProcessor
@@ -138,6 +140,7 @@ class Round:
     while self.is_paused():
       start_time = time.time() * 1000
       self.processor = self.game.get_gameboy_view_processor()
+      self.playfield = self.get_playfield()
 
       time_passed = time.time() * 1000 - start_time
       if (time_passed < 50):
@@ -154,7 +157,6 @@ class Round:
       else:
         print("RUN")
         self.run()
-    print("END")
 
   def retake(self):
     """
@@ -188,6 +190,12 @@ class Round:
       self.lines_tracker.track(self.lines(self.processor))
       self.preview_tracker.track(self.preview(self.processor))
       self.level_tracker.track(self.level(self.processor))
+      self.playfield_tracker.track(self.playfield)
+
+      #calculate statistics
+      clean_playfield = self.playfield_tracker.clean_playfield()
+      if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
+        print(Playfield(clean_playfield).parity())
 
       #print("Score: " + str(self.score_tracker.last()) + " Lines: " + str(self.lines_tracker.last()))
 
@@ -200,4 +208,6 @@ class Round:
         time.sleep((50-time_passed)/1000)
 
       start_time = time.time() * 1000
+
       self.processor = self.game.get_gameboy_view_processor()
+      self.playfield = self.get_playfield()
