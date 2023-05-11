@@ -10,13 +10,14 @@ class AreaProcessor():
   """
   def __init__(self, image, tiles_height, tiles_width, image_is_tiled=False):
     self.original_image = np.array(image)
+
+    self.nr_of_tiles_height = tiles_height
+    self.nr_of_tiles_width = tiles_width
+
     if(image_is_tiled):
       self.tiled_image = np.array(image)
     else:
       self.tiled_image = self.tile_image()
-
-    self.nr_of_tiles_height = tiles_height
-    self.nr_of_tiles_width = tiles_width
 
     self.recognizer = TileRecognizer()
     self.ambigous = True

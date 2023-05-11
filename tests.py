@@ -1,4 +1,6 @@
 import unittest
+
+from game import Round, Game
 from playfield_processor import PlayfieldProcessor, Playfield
 from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
@@ -13,7 +15,7 @@ from tile_recognizer import TileRecognizer, Tile, Tiler
 from runner import Runner
 from csvfile import CSVReader
 import cv2
-from capturer import OCVCapturer, MSSCapturer
+from capturer import OCVCapturer, MSSCapturer, Capturer
 import yaml
 from image_manipulator import convert_to_4bitgrey
 
@@ -24,18 +26,13 @@ class MockCSVWriter():
     def write(self, accepted_score, accepted_lines, current_preview, current_playfield):
         self.calls += 1
 
-# need to overwrite the grab_image
-# method to inject an image
-class TestRunner(Runner):
-    def __init__(self):
-        super().__init__()
-        self.csv_file = MockCSVWriter()
 
-    def grab_image(self, bounding_box):
-        return np.array(Image.open("test/gameboy-pause-full-view.png").convert('RGB'))
+class StaticCapturer(Capturer):
+  def __init__(self, image_path):
+    self.static_image = np.array(Image.open(image_path).convert('RGB'))
 
-    def calls(self):
-        return self.csv_file.calls
+  def grab_image(self):
+    return self.static_image
 
 class TestPlayfieldProcessor(unittest.TestCase):
   def test_cv_capturer(self):
@@ -62,8 +59,8 @@ class TestPlayfieldProcessor(unittest.TestCase):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
     gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
     runner = Runner()
-    playfield_before = runner.playfield(gv1)
-    playfield_after = runner.playfield(gv2)
+    playfield_before = self.get_playfield_processor(gv1)
+    playfield_after = self.get_playfield_processor(gv2)
     res = playfield_before.intersection(playfield_after)
     self.assertEqual(4,np.sum(res==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
@@ -73,28 +70,32 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(4,np.sum(res==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
 
+  def get_playfield_processor(self, processor):
+    playfield_image = processor.get_playfield()
+    return PlayfieldProcessor(playfield_image, image_is_tiled=True).run(return_on_transition=True)
+
   def test_clean_playfield(self):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
     gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
     gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
-    runner = Runner()
+
     tracker = PlayfieldTracker()
-    playfield_unrelated = runner.playfield(gv1)
+    playfield_unrelated = self.get_playfield_processor(gv1)
     tracker.track(playfield_unrelated)
     self.assertIsNone(tracker.clean_playfield())
 
-    playfield_before = runner.playfield(gv2)
+    playfield_before = self.get_playfield_processor(gv2)
     tracker.track(playfield_before)
     self.assertIsNone(tracker.clean_playfield())
 
-    playfield_after = runner.playfield(gv3)
+    playfield_after = self.get_playfield_processor(gv3)
     tracker.track(playfield_after)
     clean_board = tracker.clean_playfield()
     self.assertEqual(4,np.sum(clean_board==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (clean_board[15:19, 8:10]).flatten().tolist())
 
 
-  def test_playfield_replace_full_row(self):
+  def test_playfield_dont_replace_full_row(self):
     playfield = Playfield(self.create_testing_array_full_line())
 
     #preconditions
@@ -102,11 +103,22 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(0, playfield.line_clear_count)
 
     playfield.full_row_replacement()
+    self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [3, 3, 3, 9, 10, 10, 11, 3, 3, 3])
+    self.assertEqual(0, playfield.line_clear_count)
+
+  def test_playfield_dont_replace_full_grey_row(self):
+    playfield = Playfield(self.create_testing_array_full_line_grey())
+
+    #preconditions
+    self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [   12 ,   12 ,   12 ,   12 ,  12,  12,  12,   12,   12,   12 ])
+    self.assertEqual(0, playfield.line_clear_count)
+
+    playfield.full_row_replacement()
     self.assertSequenceEqual(playfield.playfield_array[11].tolist(), [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ])
     self.assertEqual(1, playfield.line_clear_count)
 
   def test_playfield_count_minos(self):
-    playfield = Playfield(self.create_testing_array_full_line())
+    playfield = Playfield(self.create_testing_array_full_line_grey())
     self.assertEqual(44, playfield.count_minos())
     playfield.full_row_replacement()
     self.assertEqual(44, playfield.count_minos())
@@ -155,7 +167,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(4, playfield2.parity())
 
   def test_playfield_has_empty_line_at(self):
-    playfield = Playfield(self.create_testing_array_full_line())
+    playfield = Playfield(self.create_testing_array_full_line_grey())
     playfield.full_row_replacement()
     self.assertFalse(playfield.has_empty_line_at(10))
     self.assertTrue(playfield.has_empty_line_at(11))
@@ -190,15 +202,9 @@ class TestPlayfieldProcessor(unittest.TestCase):
     playfield_difference = playfield1.playfield_difference(playfield2)
 
     # The s-piece covers the l-piece an only leave one
-    # edge of the l-piece free
+    # edge of the l-piece
+
     self.assertEqual(1, playfield_difference.count_minos())
-
-
-  def test_runner_on_pause(self):
-      runner = TestRunner()
-      runner.run(times=1)
-      # During pause the csv writer should not be called
-      self.assertEqual(runner.calls(),0)
 
   def test_gameboy_view_processor_on_pause(self):
       image = np.array(Image.open("test/gameboy-pause-full-view.png").convert('RGB'))
@@ -342,18 +348,19 @@ class TestPlayfieldProcessor(unittest.TestCase):
     return score
 
   def test_problematic_score(self):
+    # Currently not fixable
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
     self.assertEqual(99, self.get_score(processor))
     self.assertEqual(0, self.get_lines(processor))
+
+  def test_problematic_level(self):
+    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
     self.assertEqual(9, self.get_level(processor))
 
-  def test_problematic_score_2(self):
+  def test_problematic_lines(self):
+    # Currently not fixable
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-lines.png")
     self.assertEqual(9, self.get_lines(processor))
-
-  def test_problematic_lines(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-lines.png")
-    self.assertEqual(9, self.get_lines(processor, save_image=True))
 
   def test_gameboy_view_processor(self):
       processor = self.create_gameboy_view_processor()
@@ -397,6 +404,12 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(tiler.tile_height, 53)
     self.assertEqual(tiler.tile_width, 53)
 
+  def test_preview_processor_4x4tiles(self):
+    image = np.array(Image.open("test/preview/t-to-l-tetromino-transition-preview.png").convert('RGB'))
+    preview_processor = PreviewProcessor(image)
+    self.assertEqual(4, preview_processor.nr_of_tiles_height)
+    self.assertEqual(4, preview_processor.nr_of_tiles_width)
+
   def test_preview_processor_ambigous(self):
     image = np.array(Image.open("test/preview/t-to-l-tetromino-transition-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
@@ -406,7 +419,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
   def test_preview_processor_z(self):
     image = np.array(Image.open("test/preview/z-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
-    result = preview_processor.run()
+    result = preview_processor.run(save_tiles=True)
     self.assertEqual(result, TileRecognizer.Z_MINO)
     self.assertFalse(preview_processor.ambigous)
 
@@ -458,7 +471,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230508205133", path="test/csv/")
+    reader = CSVReader("20230511103201", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
@@ -672,6 +685,28 @@ class TestPlayfieldProcessor(unittest.TestCase):
               [-99, -99, -99, -99,   4, -99, -99, -99,   4, -99],
               [-99, -99, -99,   4,   4,   4, -99,   4,   4,   4], ]
     return (np.array(array))
+
+  def create_testing_array_full_line_grey(self):
+    array = [ [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 , -99 , -99 , -99,  -99, -99, -99, -99, -99 ],
+              [   0 ,   0 ,   0 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [ -99 , -99 ,   0 , -99 , -99, -99, -99, -99, -99, -99 ],
+              [  12 ,  12 ,  12 ,  12 ,  12,  12,  12,  12,  12,  12 ],
+              [   3 , -99 , -99 ,   4 ,   4,   4, -99,   3, -99, -99 ],
+              [   4 , -99 , -99 , -99 ,   4, -99, -99,   1,   1, -99 ],
+              [   4 ,   4 , -99 ,   3 ,   3,   3, -99, -99,   1,   1 ],
+              [   4 , -99 , -99 ,   3 , -99, -99, -99, -99, -99,   4 ],
+              [   2 ,   2 , -99 ,   1 ,   1, -99, -99, -99,   4,   4 ],
+              [   2 ,   2 , -99 , -99 ,   1,   1, -99, -99, -99,   4 ] ]
+    return (np.array(array))
+
 
   def create_testing_array_full_line(self):
     array = [ [ -99 , -99 , -99 , -99 , -99, -99, -99, -99, -99, -99 ],

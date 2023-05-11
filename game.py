@@ -10,6 +10,7 @@ from number_processor import NumberProcessor
 from playfield_processor import Playfield, PlayfieldProcessor
 from preview_processor import SpawningProcessor, PreviewProcessor
 from score_tracker import ScoreTracker, LinesTracker, LevelTracker, PreviewTracker, PlayfieldTracker
+from timer import Timer
 
 
 class Game:
@@ -17,6 +18,7 @@ class Game:
   def __init__(self, capturer):
     self.round = None
     self.capturer = capturer
+    self.timer = Timer()
 
   def is_running(self, processor):
     """
@@ -59,13 +61,10 @@ class Game:
     the case change state
     :return:
     """
-    start_time = time.time() * 1000
+    self.timer.start()
     while not self.is_running(self.processor):
       self.processor = self.get_gameboy_view_processor()
-      time_passed = time.time() * 1000 - start_time
-      if (time_passed < 50):
-        time.sleep((50 - time_passed) / 1000)
-      start_time = time.time() * 1000
+      self.timer.wait_then_restart()
 
 class Round:
   def __init__(self, game, saver):
@@ -77,6 +76,7 @@ class Round:
     self.playfield_tracker = PlayfieldTracker()
     self.saver = saver
     self.game = game
+    self.timer = Timer()
 
   def preview(self, processor):
     """
@@ -137,14 +137,10 @@ class Round:
     return break_as_number == 571406
 
   def pause(self):
+    self.timer.start()
     while self.is_paused():
-      start_time = time.time() * 1000
-      self.processor = self.game.get_gameboy_view_processor()
-      self.playfield = self.get_playfield()
-
-      time_passed = time.time() * 1000 - start_time
-      if (time_passed < 50):
-        time.sleep((50 - time_passed) / 1000)
+      self.timer.wait_then_restart()
+      self.prepare()
 
   def state_machine(self):
     while(self.game.is_running(self.processor)):
@@ -158,14 +154,29 @@ class Round:
         print("RUN")
         self.run()
 
+  def prepare(self):
+    """
+    Prepares everything for the
+    next round. Resets the
+    GameboyViewProcessor and the
+    Playfield.
+    Grabs the next image and
+    makes first analysis of the
+    playfield. We analyse the play
+    field here because we throw everything
+    away if there is blending in the
+    image
+    """
+    self.processor = self.game.get_gameboy_view_processor()
+    self.playfield = self.get_playfield()
+
   def retake(self):
     """
     Immediately retake the image if we stumbled upon
     a playfield with blending
     """
     while(self.is_blending()):
-      self.processor = self.game.get_gameboy_view_processor()
-      self.playfield = self.get_playfield()
+      self.prepare()
 
   def is_blending(self):
     """
@@ -180,7 +191,7 @@ class Round:
     on pause or does not have a blending playfield
     and the game is running.
     """
-    start_time = time.time() * 1000
+    self.timer.start()
     while self.game.is_running(self.processor) and not self.is_paused() and not self.is_blending():  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
       # by not saving every image
@@ -197,17 +208,8 @@ class Round:
       if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
         print(Playfield(clean_playfield).parity())
 
-      #print("Score: " + str(self.score_tracker.last()) + " Lines: " + str(self.lines_tracker.last()))
-
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
                           self.preview_tracker.last(), self.playfield_tracker.current.playfield_array)
 
-      time_passed = time.time()*1000-start_time
-      #print("Used time for one round: " + str(time_passed))
-      if(time_passed < 50):
-        time.sleep((50-time_passed)/1000)
-
-      start_time = time.time() * 1000
-
-      self.processor = self.game.get_gameboy_view_processor()
-      self.playfield = self.get_playfield()
+      self.timer.wait_then_restart()
+      self.prepare()
