@@ -35,35 +35,6 @@ class PlayfieldTracker(SimpleTracker):
       return None
 
 
-  def _accept(self, playfield):
-    mino_difference = self.current.mino_difference(playfield)
-    # I need a test for all those situation
-
-    # a mino zero difference is when the piece is dropping
-    # a mino four difference is when a new piece spawns
-    # a same playfield situation is it during a line burn
-    if (mino_difference != 4 and not playfield.is_equal(self.current) and mino_difference != 0):
-      print("Some weird shit happening here! Mino difference: " + str(mino_difference))
-      print("Nr minos previous: " + str(self.current.count_minos()))
-      print("Nr minos current: " + str(playfield.count_minos()))
-      #cv2.imwrite("test/wrong-difference-full-view.png", processor.original_image)
-      playfield.recreate("test/wrong-difference-current.png")
-      self.current.recreate("test/wrong-difference-previous.png")
-      print("Lines cleared: " + str(playfield.line_clear_count))
-      print("Lines cleared (previous): " + str(self.current.line_clear_count))
-      # if(current_playfield.line_clear_count > 0 or accepted_playfield.line_clear_count > 0):
-      # exit()
-      # We skip weird shit...
-    else:
-      print("accept")
-      # When two playfields are the same and there is a playfield that has registered
-      # a line burn then we want to keep the one that has registered the line burn
-      # this does not guarantee that the accepted playfield always correctly
-      # registers the line burn, but it does guarantee that once it has registered
-      # it, it doesn't get lost anymore
-      if (not self.current.is_equal(playfield) or self.current.line_clear_count > 0):
-        self.current = playfield
-
 class Tracker:
   """
   Only tracks ints
