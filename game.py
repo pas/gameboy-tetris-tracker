@@ -15,10 +15,11 @@ from timer import Timer
 
 class Game:
   MIN_WAIT_TIME = 50
-  def __init__(self, capturer):
+  def __init__(self, capturer, plotter):
     self.round = None
     self.capturer = capturer
     self.timer = Timer()
+    self.plotter = plotter
 
   def is_running(self, processor):
     """
@@ -46,7 +47,7 @@ class Game:
 
   def run(self):
     saver = ImageSaver("test/debug/", "running")
-    self.round = Round(self, saver)
+    self.round = Round(self, saver, self.plotter)
     self.round.start(self.processor)
     self.processor = self.get_gameboy_view_processor()
 
@@ -67,7 +68,7 @@ class Game:
       self.timer.wait_then_restart()
 
 class Round:
-  def __init__(self, game, saver):
+  def __init__(self, game, saver, plotter):
     self.csv_file = CSVWriter()
     self.score_tracker = ScoreTracker()
     self.lines_tracker = LinesTracker()
@@ -75,6 +76,7 @@ class Round:
     self.preview_tracker = PreviewTracker()
     self.playfield_tracker = PlayfieldTracker()
     self.saver = saver
+    self.plotter = plotter
     self.game = game
     self.timer = Timer()
 
@@ -205,9 +207,10 @@ class Round:
 
       #calculate statistics
       clean_playfield = self.playfield_tracker.clean_playfield()
-      if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
-        print(Playfield(clean_playfield).parity())
+      #if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
+        #print(Playfield(clean_playfield).parity())
 
+      self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array)
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
                           self.preview_tracker.last(), self.playfield_tracker.current.playfield_array)
 

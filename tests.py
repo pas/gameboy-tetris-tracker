@@ -2,6 +2,7 @@ import unittest
 
 from game import Round, Game
 from playfield_processor import PlayfieldProcessor, Playfield
+from plotter import Plotter
 from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
 from number_processor import NumberProcessor
@@ -458,6 +459,18 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(result, TileRecognizer.I_MINO_SIMPLE)
     self.assertFalse(preview_processor.ambigous)
 
+  def test_perfect_score(self):
+    plotter = Plotter()
+    scores, lines = plotter.get_perfect_score_table()
+    plotter.show_plot(scores, lines)
+    self.assertTrue(scores[-1], 1401300);
+
+  def test_worst_score(self):
+    plotter = Plotter()
+    scores, lines = plotter.get_worst_score_table()
+    plotter.show_plot(scores, lines)
+    self.assertTrue(len(scores), 300);
+
   def test_preview_processor_t(self):
     image = np.array(Image.open("test/preview/t-tetromino-preview.png").convert('RGB'))
     preview_processor = PreviewProcessor(image)
@@ -471,7 +484,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     recreator.recreate(playfield, 'test/screenshot-playfield-recreation.png')
 
   def test_csvreader(self):
-    reader = CSVReader("20230511103201", path="test/csv/")
+    reader = CSVReader("20230511110411", path="test/csv/")
     reader.to_image("test/recreation/")
 
   def full_image(self, image_path, test):
