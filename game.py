@@ -1,12 +1,15 @@
 import time
 
+import cv2
 import numpy as np
+from PIL import ImageOps
+from PIL import Image
 
 from csvfile import CSVWriter
 from gameboy_image import GameboyImage
 from gameboy_view_processor import GameboyViewProcessor
 from image_saver import ImageSaver
-from number_processor import NumberProcessor
+from number_processor import NumberProcessor, SequentialNumberProcessor
 from playfield_processor import Playfield, PlayfieldProcessor
 from preview_processor import SpawningProcessor, PreviewProcessor
 from score_tracker import ScoreTracker, LinesTracker, LevelTracker, PreviewTracker, PlayfieldTracker
@@ -107,8 +110,8 @@ class Round:
   def numbers(self, number_image):
     number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
                                number_image.shape[2], number_image.shape[3], is_tiled=True)
-    number_image.untile()
-    number_processor = NumberProcessor(number_image.image)
+    #number_image.untile()
+    number_processor = SequentialNumberProcessor(number_image.image)
     return number_processor.get_number()
 
   def score(self, processor):
@@ -127,7 +130,7 @@ class Round:
     self.playfield_tracker.track(Playfield.empty())
     self.processor = processor
     self.playfield = self.get_playfield()
-    self.saver.save(self.processor.original_image)
+    #self.saver.save(self.processor.original_image)
     self.state_machine()
 
   def is_paused(self):
@@ -147,13 +150,13 @@ class Round:
   def state_machine(self):
     while(self.game.is_running(self.processor)):
       if(self.is_paused()):
-        print("PAUSE")
+        #print("PAUSE")
         self.pause()
       elif(self.is_blending()):
-        print("RETAKE")
+        #print("RETAKE")
         self.retake()
       else:
-        print("RUN")
+        #print("RUN")
         self.run()
 
   def prepare(self):
@@ -199,7 +202,20 @@ class Round:
       # by not saving every image
       self.saver.save(self.processor.original_image)
 
-      self.score_tracker.track(self.score(self.processor))
+      score = self.score(self.processor)
+      self.score_tracker.track(score)
+      #bordered = Image.fromarray(self.processor.get_score()[0][5])
+      #bordered = ImageOps.expand(bordered, border=10, fill='white')
+      #bordered = np.array(bordered)
+      #self.saver.save(bordered)
+
+      print("Score: " + str(self.score_tracker.last()))
+      # This is only here to collect images that
+      # could not get detected correctly
+      if(self.score_tracker.last() == -1):
+        print("stored debug image")
+        cv2.imwrite("tetris/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
+
       self.lines_tracker.track(self.lines(self.processor))
       self.preview_tracker.track(self.preview(self.processor))
       self.level_tracker.track(self.level(self.processor))

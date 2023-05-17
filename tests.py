@@ -5,14 +5,15 @@ from playfield_processor import PlayfieldProcessor, Playfield
 from plotter import Plotter
 from preview_processor import PreviewProcessor
 from gameboy_view_processor import GameboyViewProcessor
-from number_processor import NumberProcessor
+from number_processor import NumberProcessor, SequentialNumberProcessor
 from playfield_recreator import PlayfieldRecreator
 from gameboy_image import GameboyImage
 from PIL import Image
 import numpy as np
 
 from score_tracker import PreviewTracker, PlayfieldTracker
-from tile_recognizer import TileRecognizer, Tile, Tiler
+from stats_image import StatsImage
+from tile_recognizer import TileRecognizer, Tile, Tiler, Tetromino
 from runner import Runner
 from csvfile import CSVReader
 import cv2
@@ -34,6 +35,7 @@ class StaticCapturer(Capturer):
 
   def grab_image(self):
     return self.static_image
+
 
 class TestPlayfieldProcessor(unittest.TestCase):
   def test_cv_capturer(self):
@@ -74,6 +76,67 @@ class TestPlayfieldProcessor(unittest.TestCase):
   def get_playfield_processor(self, processor):
     playfield_image = processor.get_playfield()
     return PlayfieldProcessor(playfield_image, image_is_tiled=True).run(return_on_transition=True)
+
+  def test_same_tetromino_playfield(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-1.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-2.png")
+    gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-3.png")
+    gv4 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-4.png")
+
+    tracker = PlayfieldTracker()
+    sequence_1 = self.get_playfield_processor(gv1)
+    tracker.track(sequence_1)
+    distance = tracker.tetromino_distance()
+    self.assertIsNone(distance)
+
+    # We need a atleast three images: First one as comparison,
+    # second one to find the tetromino and third one to
+    # calculate the distance
+    sequence_2 = self.get_playfield_processor(gv2)
+    tracker.track(sequence_2)
+    distance = tracker.tetromino_distance()
+    self.assertIsNone(distance)
+
+    sequence_3 = self.get_playfield_processor(gv3)
+    tracker.track(sequence_3)
+    distance = tracker.tetromino_distance()
+    self.assertEqual(distance, -8)
+
+    sequence_4 = self.get_playfield_processor(gv4)
+    tracker.track(sequence_4)
+    distance = tracker.tetromino_distance()
+    self.assertEqual(distance, 4)
+
+
+  def test_only_active_tetromino_playfield(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+
+    tracker = PlayfieldTracker()
+    playfield_one_tetromino = self.get_playfield_processor(gv1)
+    tracker.track(playfield_one_tetromino)
+    board = tracker.only_active_tetromino()
+    self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.S_MINO))
+    self.assertSequenceEqual([TileRecognizer.S_MINO, TileRecognizer.EMPTY,
+                              TileRecognizer.S_MINO, TileRecognizer.S_MINO,
+                              TileRecognizer.EMPTY, TileRecognizer.S_MINO], board.playfield_array[14:17 ,8:10].flatten().tolist())
+
+    # Because in the last frame the active tetromino was
+    # not locked it cannot make a clear difference. Therefore
+    # this returns none
+    playfield_next_tetromino = self.get_playfield_processor(gv2)
+    tracker.track(playfield_next_tetromino)
+    board = tracker.only_active_tetromino()
+    self.assertIsNone(board)
+
+    playfield_next_next_tetromino = self.get_playfield_processor(gv3)
+    tracker.track(playfield_next_next_tetromino)
+    board = tracker.only_active_tetromino()
+    self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.Z_MINO))
+    self.assertSequenceEqual([TileRecognizer.Z_MINO, TileRecognizer.Z_MINO, TileRecognizer.EMPTY,
+                              TileRecognizer.EMPTY, TileRecognizer.Z_MINO, TileRecognizer.Z_MINO], board.playfield_array[1:3 ,3:6].flatten().tolist())
+
 
   def test_clean_playfield(self):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
@@ -322,6 +385,10 @@ class TestPlayfieldProcessor(unittest.TestCase):
 
     playfield_image = processor.get_playfield()
 
+  def test_stats_image(self):
+    stat = StatsImage()
+    stat.create_image([0, 1, 10, 200, 2, 5, 7])
+
   def get_level(self, processor):
     level_image = processor.get_level()
     level = self.get_number(level_image)
@@ -348,11 +415,82 @@ class TestPlayfieldProcessor(unittest.TestCase):
     score = self.get_number(score_image)
     return score
 
-  def test_problematic_score(self):
-    # Currently not fixable
+  def test_number_processor_score_99(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
     self.assertEqual(99, self.get_score(processor))
-    self.assertEqual(0, self.get_lines(processor))
+
+  def test_number_processor_score_98(self):
+    # Currently not fixable
+    image = self.get_image("test/numbers/98.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(98, result)
+
+  def test_sequential_number_processor_score_98(self):
+    image = self.get_tiled_image("test/numbers/98.png", 1, 6, 48, 48)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(98, result)
+
+  def test_number_processor_score_9(self):
+    image = self.get_image("test/numbers/9.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(9, result)
+
+  def test_sequential_number_processor_score_9(self):
+    image = self.get_tiled_image("test/numbers/9.png", 1, 3, 35, 35)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(9, result)
+
+  def test_number_processor_score_15600(self):
+    image = self.get_image("test/numbers/15600.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(15600, result)
+
+  def test_sequential_number_processor_score_15600(self):
+    image = self.get_tiled_image("test/numbers/15600.png", 1, 6, 48, 48)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(15600, result)
+
+  def test_number_processor_score_19083(self):
+    image = self.get_image("test/numbers/19083.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(19083, result)
+
+  def test_sequential_number_processor_score_19083(self):
+    image = self.get_tiled_image("test/numbers/19083.png", 1, 6, 48, 48)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(19083, result)
+
+  def test_number_processor_score_102839(self):
+    image = self.get_image("test/numbers/102839.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(102839, result)
+
+  def test_sequential_number_processor_score_102839(self):
+    image = self.get_tiled_image("test/numbers/102839.png", 1, 6, 48, 48)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(102839, result)
+
+  def test_number_processor_score_12097(self):
+    image = self.get_image("test/numbers/12097.png")
+    processor = NumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(12097, result)
+
+  def test_sequential_number_processor_score_12097(self):
+    image = self.get_tiled_image("test/numbers/12097.png", 1, 6, 48, 48)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(12097, result)
 
   def test_problematic_level(self):
     processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
@@ -542,6 +680,11 @@ class TestPlayfieldProcessor(unittest.TestCase):
 
   def get_image(self, path):
     return cv2.imread(path)
+
+  def get_tiled_image(self, path, number_of_tiles_height, number_of_tiles_width, tile_height, tile_width):
+    image = self.get_image(path)
+    gb_image = GameboyImage(image, number_of_tiles_height, number_of_tiles_width, tile_height, tile_width, is_tiled=False)
+    return gb_image.tile()
 
   def test_second_scenario(self):
     self.full_image("test/scenario-2-high-res.png", self.create_testing_array_s2())

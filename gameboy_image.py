@@ -6,16 +6,22 @@ class GameboyImage():
   Provides standard operations for
   a full or part gameboy screen image
   """
-  def __init__(self, image, nr_of_tiles_height, nr_of_tiles_width, tile_height, tile_width, is_tiled=True):
+  def __init__(self, image, nr_of_tiles_height=None, nr_of_tiles_width=None, tile_height=None, tile_width=None, is_tiled=True):
     """
     Image as numpy array.
     """
     self.image = image
     self.is_tiled = is_tiled
-    self.nr_of_tiles_height = nr_of_tiles_height
-    self.nr_of_tiles_width = nr_of_tiles_width
-    self.tile_height = tile_height
-    self.tile_width = tile_width
+    if(is_tiled):
+      self.nr_of_tiles_height = image.shape[0]
+      self.nr_of_tiles_width = image.shape[1]
+      self.tile_width = image.shape[2]
+      self.tile_height = image.shape[3]
+    else:
+      self.nr_of_tiles_height = nr_of_tiles_height
+      self.nr_of_tiles_width = nr_of_tiles_width
+      self.tile_height = tile_height
+      self.tile_width = tile_width
 
   def tile(self):
     """

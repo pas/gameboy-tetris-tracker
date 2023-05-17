@@ -44,6 +44,15 @@ class Playfield():
   def is_line_clear(self):
     return self.line_clear_count > 0
 
+  def tetromino_distance(self, playfield):
+    """
+    Expects this playfield and the other playfield to hold only one
+    tetromino of the same type
+    """
+
+    print(np.sum(playfield.playfield_array, axis=1))
+    print(np.sum(self.playfield_array, axis=1))
+
   def surface_trace(self):
     binarized = self.binarize()
     # fill gaps with any number

@@ -1,3 +1,7 @@
+from playfield_processor import Playfield
+from stats_image import StatsImage
+
+
 class SimpleTracker:
   def __init__(self):
     self.current = -1
@@ -13,6 +17,7 @@ class PlayfieldTracker(SimpleTracker):
     self.current = None
     self.previous = None
     self.clean = None
+    self.only_tetromino = None
 
   def track(self, playfield):
     super().track(playfield)
@@ -33,6 +38,41 @@ class PlayfieldTracker(SimpleTracker):
       return self.clean
     else:
       return None
+
+  def tetromino_distance(self):
+    """
+    Calculates distance of current active
+    tetromino to the last available position
+    of a tetromino.
+    If the last available tetromino was not
+    the same tetromino then this returns
+    None
+    """
+    last = self.only_tetromino
+    current = self.only_active_tetromino()
+    print(current)
+
+    if(current is None or last is None):
+      return None
+
+    print(last.tetromino_distance(current))
+
+  def only_active_tetromino(self):
+    """
+    Returns the playfield with only the active
+    tetromino. Everything else is white.
+    """
+    if(self.previous):
+      difference = self.previous.difference(self.current)
+      if(difference.count_minos()==4):
+        self.only_tetromino = difference
+        return self.only_tetromino
+    elif(self.current.count_minos() == 4):
+      self.only_tetromino = self.current
+      return self.only_tetromino
+    else:
+      return None
+
 
 
 class Tracker:
@@ -108,6 +148,17 @@ class LevelTracker(LargerOrEqualTracker):
     super().track(level)
 
 class PreviewTracker(Tracker):
-  # This is just to make the code clear
-  def track(self, preview):
+  def __init__(self):
+    super().__init__()
+    self.stats = [0, 0, 0, 0, 0, 0, 0]
+    self.stats_image = StatsImage()
+
+  def track(self, preview, force_update=False):
     super().track(preview)
+    self._update_stats(preview, force_update)
+
+  def _update_stats(self, preview, force_update):
+    if(preview != self.last() or force_update):
+      self.stats[preview] += 1
+      self.stats_image.create_image(self.stats)
+
