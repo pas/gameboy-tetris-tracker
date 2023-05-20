@@ -89,7 +89,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     distance = tracker.tetromino_distance()
     self.assertIsNone(distance)
 
-    # We need a atleast three images: First one as comparison,
+    # We need at least three images: First one as comparison,
     # second one to find the tetromino and third one to
     # calculate the distance
     sequence_2 = self.get_playfield_processor(gv2)
@@ -443,6 +443,12 @@ class TestPlayfieldProcessor(unittest.TestCase):
     processor = SequentialNumberProcessor(image)
     result = processor.get_number()
     self.assertEqual(9, result)
+
+  def test_sequential_number_processor_score_10739(self):
+    image = self.get_tiled_image("test/numbers/10739.png", 1, 6, 38, 38)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(10739, result)
 
   def test_number_processor_score_15600(self):
     image = self.get_image("test/numbers/15600.png")

@@ -153,12 +153,15 @@ class PreviewTracker(Tracker):
     self.stats = [0, 0, 0, 0, 0, 0, 0]
     self.stats_image = StatsImage()
 
-  def track(self, preview, force_update=False):
+  def track(self, preview, playfield_tracker : PlayfieldTracker):
+    self._update_stats(preview, playfield_tracker)
     super().track(preview)
-    self._update_stats(preview, force_update)
 
-  def _update_stats(self, preview, force_update):
-    if(preview != self.last() or force_update):
+  def _update_stats(self, preview, playfield_tracker : PlayfieldTracker):
+    if(preview != self.last()):
+      print("update")
+      print(preview)
+      print(self.last())
       self.stats[preview] += 1
       self.stats_image.create_image(self.stats)
 

@@ -216,10 +216,16 @@ class Round:
         print("stored debug image")
         cv2.imwrite("tetris/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
 
+        for tile in self.processor.get_score()[0]:
+          bordered = Image.fromarray(tile)
+          bordered = ImageOps.expand(bordered, border=10, fill='white')
+          bordered = np.array(bordered)
+          self.saver.save(bordered)
+
       self.lines_tracker.track(self.lines(self.processor))
-      self.preview_tracker.track(self.preview(self.processor))
       self.level_tracker.track(self.level(self.processor))
       self.playfield_tracker.track(self.playfield)
+      self.preview_tracker.track(self.preview(self.processor), self.playfield_tracker)
 
       #calculate statistics
       clean_playfield = self.playfield_tracker.clean_playfield()
