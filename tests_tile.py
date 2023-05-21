@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from tile_recognizer import Tile
+from tetristracker.tile.tile_recognizer import Tile
 
 
 class TestTiles(unittest.TestCase):

@@ -1,12 +1,10 @@
 import numpy as np
 import cv2
-from mss import mss
-import pytesseract
 import time
 from PIL import Image, ImageOps
 import yaml
-from gameboy_view_processor import GameboyViewProcessor
-from capturer import MSSCapturer
+from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
+from tetristracker.capturer.mss_capturer import MSSCapturer
 
 
 # Use this if your tesseract excutable is not in PATH
@@ -14,7 +12,7 @@ from capturer import MSSCapturer
 
 class Check:
   def __init__(self, config_file="config.yml"):
-    with open('config.yml', 'r') as config_file:
+    with open('../config.yml', 'r') as config_file:
       self.configs = yaml.safe_load(config_file)
       self.bounding_box = self.configs["bounding_box"]
       self.capturer = MSSCapturer(self.bounding_box)

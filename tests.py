@@ -1,25 +1,27 @@
 import unittest
 
-from game import Round, Game
-from playfield_processor import PlayfieldProcessor, Playfield
-from plotter import Plotter
-from preview_processor import PreviewProcessor
-from gameboy_view_processor import GameboyViewProcessor
-from number_processor import NumberProcessor, SequentialNumberProcessor
-from playfield_recreator import PlayfieldRecreator
-from gameboy_image import GameboyImage
+from tetristracker.processor.playfield_processor import PlayfieldProcessor, Playfield
+from tetristracker.plotter import Plotter
+from tetristracker.processor.preview_processor import PreviewProcessor
+from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
+from tetristracker.processor.number_processor import NumberProcessor, SequentialNumberProcessor
+from tetristracker.image.playfield_recreator import PlayfieldRecreator
+from tetristracker.image.gameboy_image import GameboyImage
 from PIL import Image
 import numpy as np
 
-from score_tracker import PreviewTracker, PlayfieldTracker
-from stats_image import StatsImage
-from tile_recognizer import TileRecognizer, Tile, Tiler, Tetromino
-from runner import Runner
-from csvfile import CSVReader
+from tetristracker.tracker.preview_tracker import PreviewTracker
+from tetristracker.tracker.playfield_tracker import PlayfieldTracker
+from tetristracker.image.stats_image import StatsImage
+from tetristracker.tile.tile_recognizer import TileRecognizer, Tiler
+from tetristracker.runner import Runner
+from tetristracker.commasv.csv_reader import CSVReader
 import cv2
-from capturer import OCVCapturer, MSSCapturer, Capturer
+from tetristracker.capturer.capturer import Capturer
+from tetristracker.capturer.ocv_capturer import OCVCapturer
+from tetristracker.capturer.mss_capturer import MSSCapturer
 import yaml
-from image_manipulator import convert_to_4bitgrey
+from tetristracker.image.image_manipulator import convert_to_4bitgrey
 
 class MockCSVWriter():
     def __init__(self):
@@ -62,8 +64,8 @@ class TestPlayfieldProcessor(unittest.TestCase):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
     gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
     runner = Runner()
-    playfield_before = self.get_playfield_processor(gv1)
-    playfield_after = self.get_playfield_processor(gv2)
+    playfield_before = self.get_playfield(gv1)
+    playfield_after = self.get_playfield(gv2)
     res = playfield_before.intersection(playfield_after)
     self.assertEqual(4,np.sum(res==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
@@ -73,9 +75,13 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(4,np.sum(res==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
 
-  def get_playfield_processor(self, processor):
+  def get_playfield(self, processor):
     playfield_image = processor.get_playfield()
     return PlayfieldProcessor(playfield_image, image_is_tiled=True).run(return_on_transition=True)
+
+  def get_preview(self, processor):
+    preview_image = processor.get_preview()
+    return PreviewProcessor(preview_image, image_is_tiled=True).run()
 
   def test_same_tetromino_playfield(self):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-1.png")
@@ -83,30 +89,29 @@ class TestPlayfieldProcessor(unittest.TestCase):
     gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-3.png")
     gv4 = self.create_gameboy_view_processor_with("test/sequence/sequence-2-4.png")
 
-    tracker = PlayfieldTracker()
-    sequence_1 = self.get_playfield_processor(gv1)
-    tracker.track(sequence_1)
-    distance = tracker.tetromino_distance()
-    self.assertIsNone(distance)
+    field_tracker = PlayfieldTracker()
+    preview_tracker = PreviewTracker()
+    field_sequence_1 = self.get_playfield(gv1)
+    preview_sequence_1 = self.get_preview(gv1)
+    self.assertEqual(preview_sequence_1, TileRecognizer.T_MINO)
+    field_tracker.track(field_sequence_1)
+    preview_tracker.track(preview_sequence_1, field_tracker)
 
-    # We need at least three images: First one as comparison,
-    # second one to find the tetromino and third one to
-    # calculate the distance
-    sequence_2 = self.get_playfield_processor(gv2)
-    tracker.track(sequence_2)
-    distance = tracker.tetromino_distance()
-    self.assertIsNone(distance)
+    field_tracker = PlayfieldTracker()
+    preview_tracker = PreviewTracker()
+    field_sequence_2 = self.get_playfield(gv2)
+    preview_sequence_2 = self.get_preview(gv2)
+    self.assertEqual(preview_sequence_2, TileRecognizer.T_MINO)
+    field_tracker.track(field_sequence_2)
+    preview_tracker.track(preview_sequence_2, field_tracker)
 
-    sequence_3 = self.get_playfield_processor(gv3)
-    tracker.track(sequence_3)
-    distance = tracker.tetromino_distance()
-    self.assertEqual(distance, -8)
-
-    sequence_4 = self.get_playfield_processor(gv4)
-    tracker.track(sequence_4)
-    distance = tracker.tetromino_distance()
-    self.assertEqual(distance, 4)
-
+    field_tracker = PlayfieldTracker()
+    preview_tracker = PreviewTracker()
+    field_sequence_3 = self.get_playfield(gv3)
+    preview_sequence_3 = self.get_preview(gv3)
+    self.assertEqual(preview_sequence_3, TileRecognizer.S_MINO)
+    field_tracker.track(field_sequence_3)
+    preview_tracker.track(preview_sequence_3, field_tracker)
 
   def test_only_active_tetromino_playfield(self):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
@@ -114,7 +119,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
 
     tracker = PlayfieldTracker()
-    playfield_one_tetromino = self.get_playfield_processor(gv1)
+    playfield_one_tetromino = self.get_playfield(gv1)
     tracker.track(playfield_one_tetromino)
     board = tracker.only_active_tetromino()
     self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.S_MINO))
@@ -125,12 +130,12 @@ class TestPlayfieldProcessor(unittest.TestCase):
     # Because in the last frame the active tetromino was
     # not locked it cannot make a clear difference. Therefore
     # this returns none
-    playfield_next_tetromino = self.get_playfield_processor(gv2)
+    playfield_next_tetromino = self.get_playfield(gv2)
     tracker.track(playfield_next_tetromino)
     board = tracker.only_active_tetromino()
     self.assertIsNone(board)
 
-    playfield_next_next_tetromino = self.get_playfield_processor(gv3)
+    playfield_next_next_tetromino = self.get_playfield(gv3)
     tracker.track(playfield_next_next_tetromino)
     board = tracker.only_active_tetromino()
     self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.Z_MINO))
@@ -144,15 +149,15 @@ class TestPlayfieldProcessor(unittest.TestCase):
     gv3 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
 
     tracker = PlayfieldTracker()
-    playfield_unrelated = self.get_playfield_processor(gv1)
+    playfield_unrelated = self.get_playfield(gv1)
     tracker.track(playfield_unrelated)
     self.assertIsNone(tracker.clean_playfield())
 
-    playfield_before = self.get_playfield_processor(gv2)
+    playfield_before = self.get_playfield(gv2)
     tracker.track(playfield_before)
     self.assertIsNone(tracker.clean_playfield())
 
-    playfield_after = self.get_playfield_processor(gv3)
+    playfield_after = self.get_playfield(gv3)
     tracker.track(playfield_after)
     clean_board = tracker.clean_playfield()
     self.assertEqual(4,np.sum(clean_board==5))
@@ -249,7 +254,37 @@ class TestPlayfieldProcessor(unittest.TestCase):
     reduced_playfield = playfield1.all_but(TileRecognizer.L_MINO)
     self.assertEquals(8, reduced_playfield.count_minos())
 
-  def test_playfield_compare(self):
+  def test_playfield_mino_difference(self):
+    playfield1 = Playfield(self.create_testing_array_s2())
+    playfield2 = Playfield(self.create_testing_array_s2_next_piece())
+
+    comparison_mino = playfield1.mino_difference(playfield2)
+    # There should be four new minos
+    self.assertEqual(4, comparison_mino)
+
+    comparison_mino = playfield2.mino_difference(playfield1)
+    self.assertEqual(-4, comparison_mino)
+
+  def test_playfield_same_minos_true(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+
+    playfield1 = self.get_playfield(gv1)
+    playfield2 = self.get_playfield(gv2)
+
+    self.assertTrue(playfield1.same_minos(playfield2))
+
+  def test_playfield_same_minos_false(self):
+    gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-1.png")
+    gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+
+    playfield1 = self.get_playfield(gv1)
+    playfield2 = self.get_playfield(gv2)
+
+    self.assertFalse(playfield1.same_minos(playfield2))
+
+
+  def test_playfield_difference(self):
     playfield1 = Playfield(self.create_testing_array_s2())
     playfield2 = Playfield(self.create_testing_array_s2_next_piece())
 

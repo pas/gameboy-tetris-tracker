@@ -1,7 +1,7 @@
 import yaml
-from game import Game
-from capturer import MSSCapturer
-from plotter import Plotter
+from tetristracker.game import Game
+from tetristracker.capturer.mss_capturer import MSSCapturer
+from tetristracker.plotter import Plotter
 
 
 class Runner:
