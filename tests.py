@@ -14,7 +14,6 @@ from tetristracker.tracker.preview_tracker import PreviewTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
 from tetristracker.image.stats_image import StatsImage
 from tetristracker.tile.tile_recognizer import TileRecognizer, Tiler
-from tetristracker.runner import Runner
 from tetristracker.commasv.csv_reader import CSVReader
 import cv2
 from tetristracker.capturer.capturer import Capturer
@@ -44,7 +43,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     capturer = OCVCapturer()
 
   def test_image_manipulator(self):
-    image = np.array(Image.open("test/gameboy-full-view.png").convert('RGB'))
+    image = np.array(Image.open("test/full-view/gameboy-full-view.png").convert('RGB'))
     image = convert_to_4bitgrey(image)
     print(image)
     cv2.imwrite("screenshots/reduced_grey_scale.png", image)
@@ -63,7 +62,6 @@ class TestPlayfieldProcessor(unittest.TestCase):
   def test_playfield_intersection(self):
     gv1 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
     gv2 = self.create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
-    runner = Runner()
     playfield_before = self.get_playfield(gv1)
     playfield_after = self.get_playfield(gv2)
     res = playfield_before.intersection(playfield_after)
@@ -306,7 +304,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(1, playfield_difference.count_minos())
 
   def test_gameboy_view_processor_on_pause(self):
-      image = np.array(Image.open("test/gameboy-pause-full-view.png").convert('RGB'))
+      image = np.array(Image.open("test/full-view/gameboy-pause-full-view.png").convert('RGB'))
       processor = GameboyViewProcessor(image)
       continue_image = processor.get_continue()
       gameboy_image = GameboyImage(continue_image, 8, 4, 53, 53, is_tiled=True)
@@ -334,32 +332,32 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(3, image.shape[4])
 
   def create_gameboy_view_processor(self):
-    return self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
+    return self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view.png")
 
   def create_gameboy_view_processor_with(self, path):
     image = np.array(Image.open(path).convert('RGB'))
     return GameboyViewProcessor(image)
 
   def test_playfield_in_transition(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
   def test_playfield_in_transition_2(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-2.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition-2.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
   def test_playfield_in_transition_3(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-3.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition-3.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
   def test_playfield_in_transition_4(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-4.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition-4.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
@@ -368,20 +366,20 @@ class TestPlayfieldProcessor(unittest.TestCase):
     # This does not work as the difference is too small.
     # Another approach is needed here. This only happens
     # shortly after a line clear
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-in-transition-problematic.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition-problematic.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertTrue(playfield.in_transition)
 
   def test_playfield_line_clear(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-tetris.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-tetris.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run(save_tiles=True)
     self.assertEqual(1, playfield.line_clear_count)
     self.assertTrue(playfield.is_line_clear())
 
   def test_playfield_line_clear_2(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-tetris-2.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-tetris-2.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run(save_tiles=True)
     print(playfield.playfield_array)
@@ -389,14 +387,14 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertTrue(playfield.is_line_clear())
 
   def test_playfield_non_line_clear(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-non-tetris.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-non-tetris.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertEqual(0, playfield.line_clear_count)
     self.assertFalse(playfield.is_line_clear())
 
   def test_playfield_not_in_transition(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
     self.assertFalse(playfield.in_transition)
@@ -451,7 +449,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     return score
 
   def test_number_processor_score_99(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-problematic-score.png")
     self.assertEqual(99, self.get_score(processor))
 
   def test_number_processor_score_98(self):
@@ -534,12 +532,12 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(12097, result)
 
   def test_problematic_level(self):
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-score.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-problematic-score.png")
     self.assertEqual(9, self.get_level(processor))
 
   def test_problematic_lines(self):
     # Currently not fixable
-    processor = self.create_gameboy_view_processor_with("test/gameboy-full-view-problematic-lines.png")
+    processor = self.create_gameboy_view_processor_with("test/full-view/gameboy-full-view-problematic-lines.png")
     self.assertEqual(9, self.get_lines(processor))
 
   def test_gameboy_view_processor(self):
@@ -706,14 +704,14 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(0, performance, "Some miscategorized minos")
 
   def test_full_view(self):
-    image = self.get_image("test/gameboy-full-view.png")
+    image = self.get_image("test/full-view/gameboy-full-view.png")
     processor = GameboyViewProcessor(image)
     playfield_image = processor.get_playfield()
     playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
     self.performance(playfield, self.create_testing_array_full_view())
 
   def test_full_view_2(self):
-    image = self.get_image("test/gameboy-full-view-2.png")
+    image = self.get_image("test/full-view/gameboy-full-view-2.png")
     processor = GameboyViewProcessor(image)
     playfield_image = processor.get_playfield()
     playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
