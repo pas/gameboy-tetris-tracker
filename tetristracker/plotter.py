@@ -93,7 +93,7 @@ class Plotter:
     ax.scatter(lines, scores, s=1, c='g')
 
   def add_current_best(self, ax):
-    reader = CSVReader("best", "../test/csv/")
+    reader = CSVReader("best", "test/csv/")
     reader.set_delimiter(",")
     lines, scores = reader.get_lines_and_scores()
     ax.scatter(lines, scores, s=1, c='y')

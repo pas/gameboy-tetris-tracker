@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from tetristracker.tile.tile_recognizer import Tile
+from tetristracker.tile.tile import Tile
 
 
-class TestTiles(unittest.TestCase):
+class TestTile(unittest.TestCase):
   def test_tile(self):
     tile_image = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
     Tile(tile_image);

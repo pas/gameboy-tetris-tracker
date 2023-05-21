@@ -4,7 +4,7 @@ import numpy as np
 import pytesseract
 from PIL import Image, ImageOps
 
-from tetristracker.tile.tile_recognizer import Tile
+from tetristracker.tile.tile import Tile
 
 
 # Use this (with appropriate path) if your tesseract excutable is not in PATH

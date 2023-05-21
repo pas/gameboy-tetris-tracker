@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 
-from tetristracker.tile.tile_recognizer import Tiler, Tile
+from tetristracker.tile.tiler import Tiler
+from tetristracker.tile.tile import Tile
 from tetristracker.image.image_manipulator import convert_4bitgrey_to_grey
 
 

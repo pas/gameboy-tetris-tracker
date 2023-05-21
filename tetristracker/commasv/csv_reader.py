@@ -4,6 +4,8 @@ import numpy as np
 
 import csv
 
+from tetristracker.image.playfield_recreator import PlayfieldRecreator
+
 
 class CSVReader:
   TIME = 0

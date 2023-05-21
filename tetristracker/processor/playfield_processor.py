@@ -1,6 +1,10 @@
 import numpy as np
 import cv2
-from tetristracker.tile.tile_recognizer import TileRecognizer, Tiler, Tile, TetrominoTransmission, Tetromino
+from tetristracker.tile.tile_recognizer import TileRecognizer
+from tetristracker.tile.tiler import Tiler
+from tetristracker.tile.tetromino_transmission import TetrominoTransmission
+from tetristracker.tile.tetromino import Tetromino
+from tetristracker.tile.tile import Tile
 from tetristracker.image.playfield_recreator import PlayfieldRecreator
 from typing_extensions import Self
 

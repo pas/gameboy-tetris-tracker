@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 
-from tetristracker.tile.tile_recognizer import TileRecognizer, Tiler
+from tetristracker.tile.tile_recognizer import TileRecognizer
+from tetristracker.tile.tiler import Tiler
+
 
 class AreaProcessor():
   """
