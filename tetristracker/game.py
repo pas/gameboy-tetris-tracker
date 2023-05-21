@@ -51,7 +51,7 @@ class Game:
         self.idle()
 
   def run(self):
-    saver = ImageSaver("../test/debug/", "running")
+    saver = ImageSaver("screenshots/debug/", "running")
     self.round = Round(self, saver, self.plotter)
     self.round.start(self.processor)
     self.processor = self.get_gameboy_view_processor()
@@ -212,7 +212,7 @@ class Round:
       # could not get detected correctly
       if(self.score_tracker.last() == -1):
         print("stored debug image")
-        cv2.imwrite("tetris/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
+        cv2.imwrite("screenshots/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
 
         for tile in self.processor.get_score()[0]:
           bordered = Image.fromarray(tile)
