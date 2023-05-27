@@ -22,7 +22,7 @@ class AreaProcessor():
       self.tiled_image = self.tile_image()
 
     self.recognizer = TileRecognizer()
-    self.ambigous = True
+    self.ambiguous = True
 
   def tile_image(self):
     tiler = Tiler(self.nr_of_tiles_height, self.nr_of_tiles_width, self.original_image)
@@ -46,15 +46,15 @@ class AreaProcessor():
           cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-preview-tile.png', tile)
         result.append(self.recognizer.recognize(tile, simplify_i_mino=True))
 
-    unique = np.unique(result)
+    unique, counts = np.unique(result, return_counts=True)
 
-    # Another good check would be if there are not
-    # exactly four minos
-    if(not unique.shape[0] == 2 and unique[0] == -99):
-      self.ambigous = True
-    else:
-      self.ambigous = False
+    # Ambiguous if not
+    # 1) Exactly two different tiles detected: mino and white
+    # 2) Exactly twelve white tiles (therefor 4 minos)
+    self.ambiguous = not unique.shape[0] == 2 and not counts[0] == 12
 
+    # This only works because white is the smaller value
+    # than minos.
     return result[np.argmax(result)]
 
 class PreviewProcessor(AreaProcessor):

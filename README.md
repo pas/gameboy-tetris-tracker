@@ -1,8 +1,10 @@
 # gameboy-tetris-tracker
 
-This project came to light during a conversation with Tolstoj. Many ideas where either directly provided by Tolstoj or are derivates of those ideas. All tile images where provided by him! Thanks a lot!
+The current version of this tracker takes screenshots of a specific location of your screen where your tetris game is displayed. Afterwards tries to retrieve information from this image. Unfortunately at the moment it is not possible to read the live feed directly. OpenCV is not able to read an OBS virtual cam feed directly.
 
-This project is in a very early prototyping phase. You will need to tweek it to make it work, for example the bounding boxes for the screenshots are hardcoded. You will have to adapt them by hand.
+This project is in a early prototyping phase. You will need to tweek it to make it work. It is currently developed on Windows 11. There is no guarantee that it will run on other operating systems.
+
+This project came to light during a conversation with Tolstoj. Many ideas where either directly provided by Tolstoj or are derivates of those ideas. All tile images where provided by him! Thanks a lot!
 
 ## Preconditions
 
@@ -11,31 +13,24 @@ You'll need to have tesseract installed.
 ### Windows
 For windows user the UB Mannheim provides a windows version: https://hypi.app/assets/wp/wp-content/uploads/2019/10/wiki/
 
-## grabbing the bounding boxes
+## Start the program 
 
-Use a still image with your setting where the video will be shown on the screen. Run the program:
+    python main.py
 
-    python retrieve_bounding_box.py
+## Grab bounding box
 
-Drag from left top corner to bottom right corner. Copy bounding boxes out of your console into config.yml file.
+Select in Menu Others -> Retrieve bounding box
 
-## Check if bounding boxes are correct
+You'll see an image of your screen. Drag from left top corner to bottom right corner. Make sure there is a distinguishable black border around the image. For good results have the select type screen open in your tetris game.
 
-    python check.py
-
-Then look at the screenshots at screenshots/ folder. 
-
-Do the fully show the scores and the lines without any borders? If not, reset your bounding boxes. 
-
-Do they show the full playfield with brick borders? If not, reset your bounding boxes. Best do it by correcting the values by hand.
-
-Do they show the preview box without any borders? Be aware that the preview box needs to be tiled in four time four pieces. Setting this bounding box correct is normally quite tricky.
+After selection you'll see a green border around the selected part. Restart if not good. Close window if selection is correct.
   
-The program is currently really sensitive to imprecise bounding boxes especially the playfield and the preview part. If it does not categorize the minos correctly then it is probably because of the bounding boxes.
+The selected bounding box is automatically stored in config.yml. You don't need to repeat this step is you don't move window from which you grab the screenshot.
+
+The program is currently really sensitive to imprecise bounding boxes. If it does not categorize the minos correctly then it is probably because of the bounding box.
 
 # Start tracker
+Press start on the main screen. Press stop to stop tracking.
 
-    python runner.py
-
-# Wanna play Gameboy Tetris?
+# Wanna share your scores and play Gameboy Tetris with amazing people?
 Join our discord server! https://discord.gg/TjrSDzmb

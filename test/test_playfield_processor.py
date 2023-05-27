@@ -9,6 +9,27 @@ import numpy as np
 
 
 class TestPlayfieldProcessor(unittest.TestCase):
+  def test_playfield_line_clear_detection(self):
+    processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-tetris.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertEqual(1, playfield.line_clear_count)
+    self.assertTrue(playfield.is_line_clear())
+
+  def test_playfield_line_clear_detection_clear_2(self):
+    processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-tetris-2.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertEqual(2, playfield.line_clear_count)
+    self.assertTrue(playfield.is_line_clear())
+
+  def test_playfield_non__clear_detection(self):
+    processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-non-tetris.png")
+    playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
+    playfield = playfield_processor.run()
+    self.assertEqual(0, playfield.line_clear_count)
+    self.assertFalse(playfield.is_line_clear())
+
   def test_playfield_processor_transition_detection(self):
     processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)

@@ -49,4 +49,4 @@ class GameboyViewProcessor():
     return self.tiled_image[10:11, 15:18].copy()
 
   def get_level(self):
-    return self.tiled_image[7:8, 16:18].copy()
+    return self.tiled_image[7:8, 16:18].copy(), self.tiled_image[7:8, 18:19].copy()

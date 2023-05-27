@@ -5,6 +5,7 @@ from PIL import Image
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.processor.number_processor import NumberProcessor
+from tetristracker.processor.playfield_processor import PlayfieldProcessor
 from tetristracker.processor.preview_processor import PreviewProcessor
 
 
@@ -26,6 +27,11 @@ def get_score(processor):
   score_image = processor.get_score()
   score = get_number(score_image)
   return score
+
+
+def get_playfield(processor):
+  playfield_image = processor.get_playfield()
+  return PlayfieldProcessor(playfield_image, image_is_tiled=True).run(return_on_transition=True)
 
 
 def get_number(number_image, save_image=False):

@@ -10,7 +10,7 @@ class Tracker:
     """
     A None value gets tracked as -1
     but does not update the
-    accepted_score value
+    accept value
     """
     if (value != None):
       self.accepted = value

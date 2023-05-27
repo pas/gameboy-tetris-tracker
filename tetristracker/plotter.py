@@ -1,3 +1,4 @@
+import matplotlib
 from matplotlib import pyplot as plt
 
 from tetristracker.helpers import calculations
@@ -5,6 +6,10 @@ from tetristracker.commasv.csv_reader import CSVReader
 
 
 class Plotter:
+  def __init__(self):
+    # Don't want to use the GUI
+    matplotlib.use('Agg')
+
   def calculate_points(self, number_of_lines, level):
     multiplier = [40, 100, 300, 1200]
     mult = multiplier[number_of_lines-1]

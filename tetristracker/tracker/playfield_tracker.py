@@ -1,5 +1,5 @@
-from tetristracker.processor.playfield_processor import Playfield
 from tetristracker.tracker.simple_tracker import SimpleTracker
+from tetristracker.unit.playfield import Playfield
 
 
 class PlayfieldTracker(SimpleTracker):
@@ -34,6 +34,20 @@ class PlayfieldTracker(SimpleTracker):
       return self.clean
     else:
       return None
+
+  def was_line_clear(self):
+    """
+    Returns true if the previous image had a
+    line clear.
+    Calculates the difference between the
+    number of minos. If this is negative
+    (< -2) then there was a line clear.
+    """
+    line_clear_detected = False
+    if(self.previous):
+      mino_difference = self.previous.mino_difference(self.current)
+      line_clear_detected = mino_difference < -2
+    return line_clear_detected
 
   def only_active_tetromino(self):
     """

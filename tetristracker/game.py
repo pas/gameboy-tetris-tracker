@@ -1,14 +1,19 @@
+import threading
+
 import cv2
 import numpy as np
 from PIL import ImageOps
 from PIL import Image
 
 from tetristracker.commasv.csv_writer import CSVWriter
+from tetristracker.commasv.sqlite_writer import SqliteWriter
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.image.image_saver import ImageSaver
 from tetristracker.processor.number_processor import SequentialNumberProcessor
-from tetristracker.processor.playfield_processor import Playfield, PlayfieldProcessor
+from tetristracker.processor.playfield_processor import PlayfieldProcessor
+from tetristracker.tile.tile import Tile
+from tetristracker.unit.playfield import Playfield
 from tetristracker.processor.preview_processor import SpawningProcessor, PreviewProcessor
 from tetristracker.tracker.preview_tracker import PreviewTracker
 from tetristracker.tracker.level_tracker import LevelTracker
@@ -39,12 +44,16 @@ class Game:
     tile = processor.get_top_left_tile()
     return tile.is_black()
 
+  def force_stop(self):
+    thread = threading.current_thread()
+    return thread.stopped()
+
   def get_gameboy_view_processor(self):
     image = self.capturer.grab_image()
     return GameboyViewProcessor(image)
 
   def state_machine(self):
-    while True:
+    while not self.force_stop():
       if(self.is_running(self.processor)):
         self.run()
       else:
@@ -68,13 +77,18 @@ class Game:
     :return:
     """
     self.timer.start()
-    while not self.is_running(self.processor):
+    while not self.is_running(self.processor) and not self.force_stop():
       self.processor = self.get_gameboy_view_processor()
       self.timer.wait_then_restart()
 
 class Round:
   def __init__(self, game, saver, plotter):
-    self.csv_file = CSVWriter()
+    self.csv_file = SqliteWriter() #CSVWriter()
+
+    self.start_scores = 0
+    self.start_lines = 0
+    self.start_level = 0
+
     self.score_tracker : ScoreTracker = ScoreTracker()
     self.lines_tracker : LinesTracker = LinesTracker()
     self.level_tracker : LevelTracker = LevelTracker()
@@ -92,7 +106,7 @@ class Round:
     preview_image = processor.get_preview()
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
     result = preview_processor.run()
-    if(preview_processor.ambigous):
+    if(preview_processor.ambiguous):
       result = -1
     return result
 
@@ -100,7 +114,7 @@ class Round:
     spawning_image = processor.get_spawning_area()
     spawning_processor = SpawningProcessor(spawning_image, image_is_tiled=True)
     result = spawning_processor.run()
-    if(spawning_processor.ambigous):
+    if(spawning_processor.ambiguous):
       result = -1
     return result
 
@@ -125,14 +139,20 @@ class Round:
     return self.numbers(lines_image)
 
   def level(self, processor):
-    level_image = processor.get_level()
-    return self.numbers(level_image)
+    level_image, heart_image = processor.get_level()
+    is_heart = not Tile(heart_image[0][0]).is_white()
+    return self.numbers(level_image), is_heart
 
   def start(self, processor):
     self.playfield_tracker.track(Playfield.empty())
     self.processor = processor
     self.playfield = self.get_playfield()
     #self.saver.save(self.processor.original_image)
+
+    self.start_score = self.score(self.processor)
+    self.start_level, is_heart = self.level(self.processor)
+    self.start_lines = self.lines(self.processor)
+
     self.state_machine()
 
   def is_paused(self):
@@ -141,7 +161,7 @@ class Round:
     # minos and whites return the same result
     continue_image = self.processor.get_continue()
     break_as_number = self.numbers(continue_image)
-    return break_as_number == 571406
+    return break_as_number == 471806
 
   def pause(self):
     self.timer.start()
@@ -150,16 +170,20 @@ class Round:
       self.prepare()
 
   def state_machine(self):
-    while(self.game.is_running(self.processor)):
+    while(self.game.is_running(self.processor) and not self.game.force_stop()):
       if(self.is_paused()):
-        #print("PAUSE")
         self.pause()
       elif(self.is_blending()):
-        #print("RETAKE")
         self.retake()
       else:
-        #print("RUN")
         self.run()
+
+    self.finish()
+
+  def finish(self):
+    print("Score: " + str(self.start_level) + " to " + str(self.score_tracker.last()))
+    print("Level: " + str(self.start_level) + " to " + str(self.level_tracker.last()))
+    print("Lines: " + str(self.start_lines) + " to " + str(self.lines_tracker.last()))
 
   def prepare(self):
     """
@@ -199,7 +223,8 @@ class Round:
     and the game is running.
     """
     self.timer.start()
-    while self.game.is_running(self.processor) and not self.is_paused() and not self.is_blending():  # Something like not processor.get_top_left_tile().is_black()
+
+    while self.game.is_running(self.processor) and not self.game.force_stop() and not self.is_paused() and not self.is_blending():  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
       # by not saving every image
       self.saver.save(self.processor.original_image)
@@ -221,11 +246,7 @@ class Round:
           self.saver.save(bordered)
 
       self.lines_tracker.track(self.lines(self.processor))
-      self.level_tracker.track(self.level(self.processor))
-
-      if self.playfield_tracker.current.mino_difference(self.playfield) > 0:
-        print("Change!")
-
+      self.level_tracker.track(*self.level(self.processor))
       self.playfield_tracker.track(self.playfield)
       self.preview_tracker.track(self.preview(self.processor), self.playfield_tracker)
 

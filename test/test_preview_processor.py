@@ -32,39 +32,39 @@ class TestPreviewProcessor(unittest.TestCase):
 
   def test_preview_processor_ambigous(self):
     _, preview_processor = self.run_preview_processor_with("test/preview/t-to-l-tetromino-transition-preview.png")
-    self.assertTrue(preview_processor.ambigous)
+    self.assertTrue(preview_processor.ambiguous)
 
   def test_preview_processor_z(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/z-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.Z_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_l(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/l-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.L_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_j(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/j-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.J_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_s(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/s-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.S_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_o(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/o-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.O_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_i(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/i-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.I_MINO_SIMPLE)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
 
   def test_preview_processor_t(self):
     result, preview_processor = self.run_preview_processor_with("test/preview/t-tetromino-preview.png")
     self.assertEqual(result, TileRecognizer.T_MINO)
-    self.assertFalse(preview_processor.ambigous)
+    self.assertFalse(preview_processor.ambiguous)
