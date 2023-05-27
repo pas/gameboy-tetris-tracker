@@ -1,11 +1,12 @@
 import unittest
 
+from test.helpers import create_gameboy_view_processor_with
 from tetristracker.image.gameboy_image import GameboyImage
 
 
 class TestGameboyImage(unittest.TestCase):
   def test_gameboy_image(self):
-    processor = self.create_gameboy_view_processor()
+    processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view.png")
 
     #get a tiled 4x4 image
     preview_image = processor.get_preview()

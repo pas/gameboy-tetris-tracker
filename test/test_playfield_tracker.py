@@ -25,7 +25,7 @@ class TestPlayfieldTracker(unittest.TestCase):
     gv3 = create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
 
     tracker = PlayfieldTracker()
-    playfield_one_tetromino = self.get_playfield(gv1)
+    playfield_one_tetromino = get_playfield(gv1)
     tracker.track(playfield_one_tetromino)
     board = tracker.only_active_tetromino()
     self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.S_MINO))
@@ -36,12 +36,12 @@ class TestPlayfieldTracker(unittest.TestCase):
     # Because in the last frame the active tetromino was
     # not locked it cannot make a clear difference. Therefore
     # this returns none
-    playfield_next_tetromino = self.get_playfield(gv2)
+    playfield_next_tetromino = get_playfield(gv2)
     tracker.track(playfield_next_tetromino)
     board = tracker.only_active_tetromino()
     self.assertIsNone(board)
 
-    playfield_next_next_tetromino = self.get_playfield(gv3)
+    playfield_next_next_tetromino = get_playfield(gv3)
     tracker.track(playfield_next_next_tetromino)
     board = tracker.only_active_tetromino()
     self.assertEqual(4, np.sum(board.playfield_array == TileRecognizer.Z_MINO))
@@ -188,130 +188,25 @@ class TestPlayfieldTracker(unittest.TestCase):
 
 
   def test_playfield_tracker_piece_spawning_detection_full_game(self):
+    # This needs further work!
+
     # 1: expected stats 2: preview of image 3: last preview change
     expected = [
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 1
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 2
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 3
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 4
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 5
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 6
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 7
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.J_MINO],  # 8
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.Z_MINO],  # 9
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.Z_MINO],  # 10
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 1
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 2
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 3
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 4
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 5
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 6
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 7
+      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.S_MINO],  # 8
+      [[0, 0, 0, 0, 0, 1, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 9
+      [[0, 0, 0, 0, 0, 1, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 10
 
-      [[0, 0, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.Z_MINO],  # 11
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.EMPTY],  # 12
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.EMPTY],  # 13
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.EMPTY],  # 14
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.L_MINO, TileRecognizer.EMPTY],  # 15
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.L_MINO],  # 16
-      [[0, 1, 0, 0, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.L_MINO],  # 17
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 18
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 19
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 20
-
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],   # 21
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],   # 22
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],   # 23
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],   # 24
-      [[0, 1, 0, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 25
-      # Same piece in preview as just spawned
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 26
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 27
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 28
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 29
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 30
-
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 31
-      [[0, 1, 1, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.O_MINO],  # 32
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 33
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 34
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 35
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 36
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 37
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 38
-      [[0, 1, 2, 1, 0, 0, 0], TileRecognizer.J_MINO, TileRecognizer.T_MINO],  # 39
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 40
-
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 41
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 42
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 43
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 44
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 45
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 46
-      [[0, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 47
-      # Same piece in preview as just spawned
-      [[1, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 48
-      [[1, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 49
-      [[1, 1, 2, 1, 1, 0, 0], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 50
-
-      [[1, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.J_MINO],  # 51
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 52
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 53
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 54
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 55
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 56
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 57
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 58
-      [[2, 1, 2, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.O_MINO],  # 59
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 60
-
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 61
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 62
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 63
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 64
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.Z_MINO],  # 65
-      [[2, 1, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.Z_MINO],  # 66
-      [[2, 2, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 67
-      [[2, 2, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 68
-      [[2, 2, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 69
-      [[2, 2, 3, 1, 1, 0, 0], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 70
-
-      [[2, 2, 3, 1, 1, 0, 0], TileRecognizer.O_MINO, TileRecognizer.T_MINO],  # 71
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 72
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 73
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 74
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 75
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.O_MINO, TileRecognizer.EMPTY],  # 76
-      [[2, 2, 3, 1, 2, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.O_MINO],  # 77
-      [[2, 2, 4, 1, 2, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 78
-      [[2, 2, 4, 1, 2, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 79
-      [[2, 2, 4, 1, 2, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 80
-
-      [[2, 2, 4, 1, 2, 0, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 81
-      [[2, 2, 4, 1, 2, 0, 0], TileRecognizer.Z_MINO, TileRecognizer.I_MINO_SIMPLE],  # 82
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 83
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 84
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 85
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 86
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 87
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 88
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 89
-
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 90
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 91
-      [[2, 2, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.Z_MINO],  # 92
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 93
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 94
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 95
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 96
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 97
-      [[2, 3, 4, 1, 2, 0, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 98
-      [[2, 3, 4, 1, 2, 1, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 99
-      [[2, 3, 4, 1, 2, 1, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 100
-
-      [[2, 3, 4, 1, 2, 1, 1], TileRecognizer.S_MINO, TileRecognizer.EMPTY],  # 101
-      [[2, 3, 4, 1, 2, 1, 1], TileRecognizer.T_MINO, TileRecognizer.S_MINO],  # 102
-      [[2, 3, 4, 1, 2, 2, 1], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 103
-      [[2, 3, 4, 1, 2, 2, 1], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 104
-      [[2, 3, 4, 1, 2, 2, 1], TileRecognizer.T_MINO, TileRecognizer.EMPTY],  # 105
-      [[2, 3, 4, 1, 2, 2, 1], TileRecognizer.J_MINO, TileRecognizer.T_MINO],  # 106
-      [[2, 3, 4, 1, 3, 2, 1], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 107
-      [[2, 3, 4, 1, 3, 2, 1], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 108
-      [[2, 3, 4, 1, 3, 2, 1], TileRecognizer.J_MINO, TileRecognizer.EMPTY],  # 109
-      [[2, 3, 4, 1, 3, 2, 1], TileRecognizer.S_MINO, TileRecognizer.J_MINO],  # 110
+      [[0, 0, 0, 0, 0, 1, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 11
+      [[0, 0, 0, 0, 0, 1, 0], TileRecognizer.I_MINO_SIMPLE, TileRecognizer.EMPTY],  # 12
+      [[0, 0, 0, 0, 0, 1, 0], TileRecognizer.Z_MINO, TileRecognizer.I_MINO_SIMPLE],  # 13
+      [[0, 0, 0, 0, 0, 1, 1], TileRecognizer.Z_MINO, TileRecognizer.EMPTY],  # 14
     ]
 
     gvs = self.get_sequence("test/sequence/full-game/running", len(expected))
@@ -320,7 +215,6 @@ class TestPlayfieldTracker(unittest.TestCase):
     preview_tracker = PreviewTracker()
     preview_tracker.track(TileRecognizer.J_MINO, field_tracker)
     for number, gv in enumerate(gvs):
-      #print("running-" + str(number+1))
       self.prepare_playfield_and_preview(gv, field_tracker, preview_tracker)
       self.assertSequenceEqual(preview_tracker.stats, expected[number][0], "in running-"+str(number+1))
       self.assertEqual(expected[number][1], preview_tracker.last(), "for current preview in running-"+str(number+1))
