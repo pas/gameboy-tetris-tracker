@@ -72,6 +72,35 @@ class TestSqlite(unittest.TestCase):
     self.assertEqual(5, result[6])
     self.assertSequenceEqual([[1,2,5,4,5],[6,7,8,9,10]], result[7])
 
+  def _write_two_rounds_into_temp_database(self):
+    # first "round"
+    sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
+    sqlite.write(1, 2, 3, 4, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
+    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+
+    time.sleep(1)
+
+    # start another "round"
+    sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
+    sqlite.write(1, 2, 3, 4, np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+
+  def test_database_round_id_retrieval(self):
+    self._write_two_rounds_into_temp_database()
+
+    sqlite_read = SqliteReader(path=self.path, file_name=self.file_name)
+    result = sqlite_read.get_round_ids()
+    self.assertEqual(2, len(result))
+
+  def test_database_round_retrieval_by_id(self):
+    self._write_two_rounds_into_temp_database()
+
+    sqlite_read = SqliteReader(path=self.path, file_name=self.file_name)
+    ids = sqlite_read.get_round_ids()
+    round_id = ids[0][0]
+    result = sqlite_read.get_round(str(round_id))
+    self.assertEqual(2, len(result))
+
   def test_database_round_values_retrieval(self):
     """
     This test only checks whether it returns

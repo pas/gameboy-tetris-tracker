@@ -45,11 +45,33 @@ class SqliteReader:
 
   def get_start_and_end_times_per_round(self):
     query = "SELECT round_id, MIN(time) AS start, MAX(time) AS end FROM rounds GROUP BY round_id"
-    con = sqlite3.connect(self.path + self.file_name)
-    res = con.execute(query)
-    res = self._to_list(res.fetchall())
+    res = self.connect_and_excute(query)
     res = self._deserialize_start_and_end_times(res)
     return res
+
+  def connect_and_excute(self, query):
+    con = sqlite3.connect(self.path + self.file_name)
+    res = con.execute(query)
+    return self._to_list(res.fetchall())
+
+  def get_round_ids(self):
+    query = "SELECT DISTINCT round_id FROM rounds"
+    res = self.connect_and_excute(query)
+    return res
+
+  def get_round(self, round_id):
+    query = "SELECT * FROM rounds WHERE round_id = "+round_id+";"
+    res = self.connect_and_excute(query)
+    res = self._deserialize_round(res)
+    return res
+
+  def _deserialize_round(self, values):
+    for round in values:
+      time = datetime.datetime.strptime(round[2], "%Y/%m/%d %H:%M:%S.%f")
+      image_array = json.loads(round[7])
+      round[2] = time
+      round[7] = image_array
+    return values
 
   def _deserialize_start_and_end_times(self, values):
     result = []

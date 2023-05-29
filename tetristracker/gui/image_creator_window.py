@@ -9,6 +9,7 @@ from PIL import Image
 from tetristracker.gui.button_call import ButtonCall
 from tetristracker.gui.import_popup_window import ImportPopupWindow
 from tetristracker.gui.window import Window
+from tetristracker.helpers.calculations import number_to_image_path
 
 
 class Position:
@@ -72,7 +73,7 @@ class ImageBuilder(ImageVisitor):
     self.tiles = self._tiles_array()
 
   def _tiles_array(self):
-    return [self._open_image(self._get_path(i)) for i in range(256)]
+    return [self._open_image(number_to_image_path(i)) for i in range(256)]
 
   def _open_image(self, path):
     return np.array(Image.open(path).convert('RGB'))
@@ -134,7 +135,7 @@ class ArrayBuilder(ImageVisitor):
 class ImageCreatorWindow(Window):
   def __init__(self):
     self.WHITE = 47
-    self.white_tile = self.get_path(self.WHITE)
+    self.white_tile = number_to_image_path(self.WHITE)
     self.select = self.WHITE
     self.select_path = self.white_tile
     self.previous = None
@@ -147,10 +148,6 @@ class ImageCreatorWindow(Window):
 
   def name(self):
     return 'Create your own Tetris background'
-
-  def get_path(self, number):
-    hex_number = f'{number:02x}'.upper()
-    return "images/tiles/" + hex_number + ".png"
 
   def visit_image(self, visitor):
     """
@@ -169,7 +166,7 @@ class ImageCreatorWindow(Window):
     self.image_layout = [
       [sg.Button(image_filename=self.white_tile, size=(4, 2), key=ButtonCall("_IMAGE_", self.WHITE).call, pad=(0, 0)) for _ in
        range(self.MAX_COL)] for _ in range(self.MAX_ROWS)]
-    self.select_layout = [[sg.Button(image_filename=self.get_path(j + i * 16), border_width=3, size=(4, 2),
+    self.select_layout = [[sg.Button(image_filename=number_to_image_path(j + i * 16), border_width=3, size=(4, 2),
                                      key=ButtonCall("_SELECT_", j + i * 16).call, pad=(0, 0)) for j in range(16)] for i
                           in
                           range(16)]
@@ -201,7 +198,7 @@ class ImageCreatorWindow(Window):
       if event().key == "_SELECT_":
         if (self.previous):
           self.window[self.previous].update(button_color=(sg.theme_background_color(), sg.theme_background_color()))
-        self.select_path = self.get_path(event().data)
+        self.select_path = number_to_image_path(event().data)
         self.select = event().data
         self.window[event].update(button_color=(sg.theme_background_color(), "#ff0000"))
         self.previous = event
