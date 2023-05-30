@@ -186,6 +186,21 @@ class TestPlayfieldTracker(unittest.TestCase):
       self.prepare_playfield_and_preview(gv, field_tracker, preview_tracker)
       self.assertSequenceEqual(expected[number], preview_tracker.stats, "in sequence 3-"+str(number+1))
 
+  def test_playfield_tracker_piece_spawning_detection_4(self):
+    gvs = self.get_sequence("test/sequence/sequence-3", 5)
+
+    gvs_spawning = gvs[-1]
+    gvs = gvs[0:4]
+
+    field_tracker = PlayfieldTracker()
+    preview_tracker = PreviewTracker()
+    for number, gv in enumerate(gvs):
+      self.prepare_playfield_and_preview(gv, field_tracker, preview_tracker)
+      self.assertFalse(preview_tracker.tetromino_spawned, "in sequence 3-"+str(number+1))
+
+    self.prepare_playfield_and_preview(gvs_spawning, field_tracker, preview_tracker)
+    self.assertTrue(preview_tracker.tetromino_spawned, "in sequence 3-5")
+
 
   def test_playfield_tracker_piece_spawning_detection_full_game(self):
     # This needs further work!

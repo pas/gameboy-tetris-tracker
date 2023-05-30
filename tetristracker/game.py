@@ -258,7 +258,7 @@ class Round:
 
       self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array)
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
-                          self.preview_tracker.last(), self.playfield_tracker.current.playfield_array)
+                          self.preview_tracker.last(), self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
 
       self.timer.wait_then_restart()
       self.prepare()

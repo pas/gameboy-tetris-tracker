@@ -5,6 +5,7 @@ from tetristracker.gui.button_call import ButtonCall
 from tetristracker.gui.image_creator_window import Position
 from tetristracker.gui.window import Window
 from tetristracker.helpers.calculations import number_to_image_path, tile_number_to_image_number
+from tetristracker.recreator.replay_creator import ReplayCreator
 
 
 class ReplayWindow(Window):
@@ -26,7 +27,8 @@ class ReplayWindow(Window):
     self.button_layout = [[sg.Button("Load game", key="_LOAD_"),
                            sg.Combo(self._get_round_ids(), readonly=True, enable_events=False, key="_LIST_"),
                            sg.Button("Next", key="_NEXT_"),
-                           sg.Button("Previous", key="_PREV_")]]
+                           sg.Button("Previous", key="_PREV_"),
+                           sg.Button("Create B-Type replay", key="_SAVE_REPLAY_")]]
     return [self.image_layout, self.button_layout]
 
   def _get_round_ids(self):
@@ -40,6 +42,12 @@ class ReplayWindow(Window):
       self._next()
     if(event == "_PREV_"):
       self._previous()
+    if(event == "_SAVE_REPLAY_"):
+      self._save_replay()
+
+  def _save_replay(self):
+    replay = ReplayCreator(self.round, self.index)
+    replay.save("screenshots/replay.txt")
 
   def _next(self):
     if(self.round != None):
@@ -55,7 +63,7 @@ class ReplayWindow(Window):
   def _update_image(self, index):
     self.index = index
     data = self.round[index]
-    self.image_array = data[7]
+    self.image_array = data[SqliteReader.PLAYFIELD]
     for col_nr, col in enumerate(self.image_array):
       for row_nr, tile_nr in enumerate(col):
         self.image_layout[col_nr][row_nr].update(source=number_to_image_path(tile_number_to_image_number(tile_nr)))

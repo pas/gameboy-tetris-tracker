@@ -26,7 +26,7 @@ class TestSqlite(unittest.TestCase):
 
   def test_database_read_and_write_one(self):
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
+    sqlite.write(1, 2, 3, 4, False, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
     sqlite_read = SqliteReader(prefix=str(sqlite.id), path=self.path, file_name=self.file_name)
     result = sqlite_read.get_all()[0]
     self.assertTrue(result[1]) # round_id int
@@ -35,20 +35,21 @@ class TestSqlite(unittest.TestCase):
     self.assertEqual(2, result[4])
     self.assertEqual(3, result[5])
     self.assertEqual(4, result[6])
-    self.assertSequenceEqual([[1,2,3,4,5],[6,7,8,9,10]], result[7])
+    self.assertFalse(result[7])
+    self.assertSequenceEqual([[1,2,3,4,5],[6,7,8,9,10]], result[8])
 
   def test_database_read_and_write_multiple_times(self):
     # first "round"
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
-    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(1, 2, 3, 4, False, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
+    sqlite.write(2, 3, 4, 5, False, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
 
     time.sleep(1)
 
     # start another "round"
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]))
-    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(1, 2, 3, 4, True, np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(2, 3, 4, 5, False, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
 
     sqlite_read = SqliteReader(prefix=str(sqlite.id), path=self.path, file_name=self.file_name)
     values = sqlite_read.get_all()
@@ -61,7 +62,8 @@ class TestSqlite(unittest.TestCase):
     self.assertEqual(2, result[4])
     self.assertEqual(3, result[5])
     self.assertEqual(4, result[6])
-    self.assertSequenceEqual([[1,2,3,4,5],[6,7,8,9,10]], result[7])
+    self.assertTrue(result[7])
+    self.assertSequenceEqual([[1,2,3,4,5],[6,7,8,9,10]], result[8])
 
     result = values[1]
     self.assertTrue(result[1]) # round_id int
@@ -70,20 +72,21 @@ class TestSqlite(unittest.TestCase):
     self.assertEqual(3, result[4])
     self.assertEqual(4, result[5])
     self.assertEqual(5, result[6])
-    self.assertSequenceEqual([[1,2,5,4,5],[6,7,8,9,10]], result[7])
+    self.assertFalse(result[7])
+    self.assertSequenceEqual([[1,2,5,4,5],[6,7,8,9,10]], result[8])
 
   def _write_two_rounds_into_temp_database(self):
     # first "round"
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
-    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(1, 2, 3, 4, False, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
+    sqlite.write(2, 3, 4, 5, True, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
 
     time.sleep(1)
 
     # start another "round"
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]))
-    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(1, 2, 3, 4, False, np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(2, 3, 4, 5, False, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
 
   def test_database_round_id_retrieval(self):
     self._write_two_rounds_into_temp_database()
@@ -111,8 +114,8 @@ class TestSqlite(unittest.TestCase):
     class.)
     """
     sqlite = SqliteWriter(path=self.path, file_name=self.file_name)
-    sqlite.write(1, 2, 3, 4, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
-    sqlite.write(2, 3, 4, 5, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
+    sqlite.write(1, 2, 3, 4, True, np.array([[1,2,3,4,5],[6,7,8,9,10]]))
+    sqlite.write(2, 3, 4, 5,  False, np.array([[1, 2, 5, 4, 5], [6, 7, 8, 9, 10]]))
 
     sqlite_read = SqliteReader(prefix=str(sqlite.id), path=self.path, file_name=self.file_name)
     result = sqlite_read.get_start_and_end_times_per_round()

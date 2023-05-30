@@ -11,14 +11,15 @@ from tetristracker.unit.round_values import RoundValues
 
 
 class SqliteReader:
-  TIME = 0
-  SCORE = 1
-  LINES = 2
-  LEVEL = 3
-  PREVIEW = 4
-  PLAYFIELD = 5
-
-  headers = ["time", "score", "lines", "preview", "playfield"]
+  ID = 0
+  ROUND_ID = 1
+  TIME = 2
+  SCORE = 3
+  LINES = 4
+  LEVEL = 5
+  PREVIEW = 6
+  SPAWNED = 7
+  PLAYFIELD = 8
 
   def __init__(self, prefix="", path="screenshots/", file_name="tetris.db"):
     self.prefix = prefix
@@ -36,8 +37,8 @@ class SqliteReader:
     res = res.fetchall()
     res = self._to_list(res)
     for entry in res:
-      entry[7] = json.loads(entry[7])
-      entry[1] = datetime.datetime.strptime(entry[2], "%Y/%m/%d %H:%M:%S.%f")
+      entry[self.PLAYFIELD] = json.loads(entry[self.PLAYFIELD])
+      entry[self.TIME] = datetime.datetime.strptime(entry[self.TIME], "%Y/%m/%d %H:%M:%S.%f")
     return res
 
   def get_all(self):
@@ -45,32 +46,30 @@ class SqliteReader:
 
   def get_start_and_end_times_per_round(self):
     query = "SELECT round_id, MIN(time) AS start, MAX(time) AS end FROM rounds GROUP BY round_id"
-    res = self.connect_and_excute(query)
+    res = self.connect_and_execute(query)
     res = self._deserialize_start_and_end_times(res)
     return res
 
-  def connect_and_excute(self, query):
+  def connect_and_execute(self, query):
     con = sqlite3.connect(self.path + self.file_name)
     res = con.execute(query)
     return self._to_list(res.fetchall())
 
   def get_round_ids(self):
     query = "SELECT DISTINCT round_id FROM rounds"
-    res = self.connect_and_excute(query)
+    res = self.connect_and_execute(query)
     return res
 
   def get_round(self, round_id):
     query = "SELECT * FROM rounds WHERE round_id = "+round_id+";"
-    res = self.connect_and_excute(query)
+    res = self.connect_and_execute(query)
     res = self._deserialize_round(res)
     return res
 
   def _deserialize_round(self, values):
     for round in values:
-      time = datetime.datetime.strptime(round[2], "%Y/%m/%d %H:%M:%S.%f")
-      image_array = json.loads(round[7])
-      round[2] = time
-      round[7] = image_array
+      round[self.TIME] = datetime.datetime.strptime(round[self.TIME], "%Y/%m/%d %H:%M:%S.%f")
+      round[self.PLAYFIELD] = json.loads(round[self.PLAYFIELD])
     return values
 
   def _deserialize_start_and_end_times(self, values):
