@@ -18,8 +18,9 @@ class SqliteReader:
   LINES = 4
   LEVEL = 5
   PREVIEW = 6
-  SPAWNED = 7
-  PLAYFIELD = 8
+  TETROMINO_IN_PLAY = 7
+  SPAWNED = 8
+  PLAYFIELD = 9
 
   def __init__(self, prefix="", path="screenshots/", file_name="tetris.db"):
     self.prefix = prefix

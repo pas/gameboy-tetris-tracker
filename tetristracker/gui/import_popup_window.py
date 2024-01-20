@@ -27,6 +27,10 @@ class ImportPopupWindow(Window):
       ]
     ]
 
+  def _get_path(self, number):
+    hex_number = f'{number:02x}'.upper()
+    return "images/tiles/" + hex_number + ".png"
+
   def _event_loop_hook(self, event, values):
     leave_event_loop = False
 
@@ -38,7 +42,7 @@ class ImportPopupWindow(Window):
             reader = csv.reader(csv_file, delimiter=";")
             for row_nr, row in enumerate(reader):
               for column_nr, tile_nr in enumerate(row):
-                path = self.master_window.get_path(int(tile_nr))
+                path = self._get_path(int(tile_nr))
                 button = self.master_window.image_layout[row_nr][column_nr]
                 button.key().data = int(tile_nr)
                 button.update(image_filename=path)

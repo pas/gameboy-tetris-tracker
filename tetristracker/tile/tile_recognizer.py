@@ -68,14 +68,14 @@ class TileRecognizer:
     return np.array(image)
 
   def create_mino_array(self):
-    j_mino = self.retrieve_template("images/tiles/81.png")
-    z_mino = self.retrieve_template("images/tiles/82.png")
-    o_mino = self.retrieve_template("images/tiles/83.png")
-    l_mino = self.retrieve_template("images/tiles/84.png")
-    t_mino = self.retrieve_template("images/tiles/85.png")
-    s_mino = self.retrieve_template("images/tiles/86.png")
+    j_mino = self.retrieve_template("images/tiles/81.png") #0
+    z_mino = self.retrieve_template("images/tiles/82.png") #1
+    o_mino = self.retrieve_template("images/tiles/83.png") #2
+    l_mino = self.retrieve_template("images/tiles/84.png") #3
+    t_mino = self.retrieve_template("images/tiles/85.png") #4
+    s_mino = self.retrieve_template("images/tiles/86.png") #5
 
-    t1_mino = self.retrieve_template("images/tiles/80.png")
+    t1_mino = self.retrieve_template("images/tiles/80.png") #6
     t2_mino = self.retrieve_template("images/tiles/88.png")
     t3_mino = self.retrieve_template("images/tiles/89.png")
     t1r_mino = self.retrieve_template("images/tiles/8A.png")

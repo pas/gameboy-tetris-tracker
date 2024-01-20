@@ -12,7 +12,9 @@ class TestGameboyViewProcessor(unittest.TestCase):
     return gb_image.tile()
 
   def test_number_processor_score_98(self):
-    # Currently not fixable
+    # Currently not fixable but not used anymore
+    # I'll leave it in to showcase the problem
+    # of the non-sequential ocr version.
     image = get_image("test/numbers/98.png")
     processor = NumberProcessor(image)
     result = processor.get_number()
@@ -23,6 +25,12 @@ class TestGameboyViewProcessor(unittest.TestCase):
     processor = SequentialNumberProcessor(image)
     result = processor.get_number()
     self.assertEqual(98, result)
+
+  def test_sequential_number_processor_score_17_ocr_capturere(self):
+    image = self.get_tiled_image("test/numbers/17-ocr-capturer.png", 1, 6, 64, 64)
+    processor = SequentialNumberProcessor(image)
+    result = processor.get_number()
+    self.assertEqual(17, result)
 
   def test_number_processor_score_9(self):
     image = get_image("test/numbers/9.png")

@@ -4,7 +4,7 @@ from PIL import Image
 
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
-from tetristracker.processor.number_processor import NumberProcessor
+from tetristracker.processor.number_processor import SequentialNumberProcessor
 from tetristracker.processor.playfield_processor import PlayfieldProcessor
 from tetristracker.processor.preview_processor import PreviewProcessor
 
@@ -37,14 +37,17 @@ def get_playfield(processor):
 def get_number(number_image, save_image=False):
   number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
                               number_image.shape[2], number_image.shape[3], is_tiled=True)
-  number_image.untile()
+
   if(save_image):
     cv2.imwrite("test/number.png", number_image.image)
 
-  number_processor = NumberProcessor(number_image.image)
+  number_processor = SequentialNumberProcessor(number_image.image)
   level = number_processor.get_number()
   return level
 
+
+def write_image(name, image):
+  cv2.imwrite("test/" + name + ".png", image)
 
 def create_testing_array_full_view():
   array = [[-99, -99, -99, -99, -99, -99, -99, -99, -99, -99],

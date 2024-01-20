@@ -1,5 +1,4 @@
 import datetime
-import humanize
 
 class RoundValues:
   def __init__(self, start : datetime.date, end : datetime.date, time_passed : datetime.time):

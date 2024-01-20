@@ -23,7 +23,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     self.assertEqual(2, playfield.line_clear_count)
     self.assertTrue(playfield.is_line_clear())
 
-  def test_playfield_non__clear_detection(self):
+  def test_playfield_non_clear_detection(self):
     processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-non-tetris.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()

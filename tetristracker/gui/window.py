@@ -27,8 +27,12 @@ class Window(ABC):
     while not leave_event_loop:
       event, values = self.window.read()
       if event in (sg.WIN_CLOSED, 'Exit'):
+        self._window_close_hook()
         break
       leave_event_loop = self._event_loop_hook(event, values)
+
+  def _window_close_hook(self):
+    pass
 
   @abstractmethod
   def _event_loop_hook(self, event, values):

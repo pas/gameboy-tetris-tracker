@@ -73,10 +73,10 @@ class Tile:
     Expects a 3D-numpy-array [h, w, 3(rgb)]
 
     Every tile that consists of more than
-    75% white pixels is considered as white.
+    75% white pixels is considered as black.
     This removes difficult edge cases and
     make template matching slightly more precise
-    :return: true if 75% of the tile is white, false otherwise
+    :return: true if 75% of the tile is black, false otherwise
     """
     image_sum = np.sum(self.tile_image, axis=-1)
     image = np.zeros(image_sum.shape)
@@ -101,15 +101,19 @@ class Tile:
     res = np.sum( percent_appearance[(unique_values <= max_value + threshhold) & (unique_values >= max_value - threshhold) ])
     return res > 0.75
 
-  def is_white(self):
+  def is_white(self, threshhold=0.75):
     """
     Expects a 3D-numpy-array [h, w, 3(rgb)]
 
-    Every tile that consists of more than
+    Standard: Every tile that consists of more than
     75% white pixels is considered as white.
     This removes difficult edge cases and
     make template matching slightly more precise
-    :return: true if 75% of the tile is white, false otherwise
+
+    You can adjust this value by passing the new
+    threshhold value.
+
+    :return: true if at least threshold (standard is 75%) of the tile is white, false otherwise
     """
     image = self.tile_image.copy()
     # set everything not white to 1
@@ -117,7 +121,7 @@ class Tile:
     # set everything white to 0
     image[image == 255] = 0
     resolution = image.shape[0]*image.shape[1]*image.shape[2]
-    return np.sum(image)/resolution < 0.25
+    return np.sum(image)/resolution < (1-threshhold)
 
   def resize(self, height, width):
     self.tile_image = np.array(Image.fromarray(self.tile_image).resize((width, height), Image.Resampling.LANCZOS))

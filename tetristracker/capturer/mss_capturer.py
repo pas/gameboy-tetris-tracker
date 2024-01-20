@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 from mss import mss
+from threading import Lock
 
 
 class MSSCapturer:
@@ -16,7 +17,11 @@ class MSSCapturer:
     pass
 
   def grab_image(self):
-    return np.array(Image.fromarray(np.array(self.sct.grab(self.bounding_box))).convert('RGB'))
+    lock = Lock()
+    lock.acquire()
+    screenshot = self.sct.grab(self.bounding_box)
+    lock.release()
+    return np.array(Image.fromarray(np.array(screenshot)).convert('RGB'))
 
   def remove_border(self, image):
     return self.trim(image)

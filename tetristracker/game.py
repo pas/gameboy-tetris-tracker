@@ -42,6 +42,8 @@ class Game:
     # within Round (or we have to set it
     # up differently...)
     tile = processor.get_top_left_tile()
+    cv2.imwrite("direct_image.png", processor.original_image)
+    cv2.imwrite("direct_tile.png", tile.tile_image)
     return tile.is_black()
 
   def force_stop(self):
@@ -147,21 +149,37 @@ class Round:
     self.playfield_tracker.track(Playfield.empty())
     self.processor = processor
     self.playfield = self.get_playfield()
-    #self.saver.save(self.processor.original_image)
+
+    # We want to have a clean image at the
+    # start
+    if(self.is_blending()):
+      # Retakes an image until no blending is visible
+      self.retake()
+
+    self.saver.save(self.processor.original_image)
 
     self.start_score = self.score(self.processor)
     self.start_level, is_heart = self.level(self.processor)
     self.start_lines = self.lines(self.processor)
 
+    #write current state to database
+    only_one, mino  = self.playfield.only_one_type_of_mino()
+    if(only_one):
+      self.preview_tracker.force_count(mino)
+      start_preview = self.preview(self.processor)
+      self.csv_file.write(self.start_score, self.start_lines, self.start_level,
+                          start_preview, mino, True, self.playfield.playfield_array)
+
+
     self.state_machine()
 
   def is_paused(self):
-    # this is a brittle hack. We just hope
+    # this is a very brittle hack. We just hope
     # that not another combination of
     # minos and whites return the same result
     continue_image = self.processor.get_continue()
     break_as_number = self.numbers(continue_image)
-    return break_as_number == 471806
+    return break_as_number == 471806 or break_as_number == 871806
 
   def pause(self):
     self.timer.start()
@@ -198,6 +216,7 @@ class Round:
     away if there is blending in the
     image
     """
+    # This currently needs almost three seconds...
     self.processor = self.game.get_gameboy_view_processor()
     self.playfield = self.get_playfield()
 
@@ -226,7 +245,7 @@ class Round:
 
     while self.game.is_running(self.processor) and not self.game.force_stop() and not self.is_paused() and not self.is_blending():  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
-      # by not saving every image
+      # by not saving every image but it only needs like 14 miliseconds
       self.saver.save(self.processor.original_image)
 
       score = self.score(self.processor)
@@ -235,6 +254,7 @@ class Round:
       print("Score: " + str(self.score_tracker.last()))
       # This is only here to collect images that
       # could not get detected correctly
+      # This should not happen
       if(self.score_tracker.last() == -1):
         print("stored debug image")
         cv2.imwrite("screenshots/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
@@ -257,8 +277,10 @@ class Round:
 
 
       self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array)
+
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
-                          self.preview_tracker.last(), self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
+                          self.preview_tracker.last(), self.preview_tracker.spawned_piece, self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
 
       self.timer.wait_then_restart()
+
       self.prepare()

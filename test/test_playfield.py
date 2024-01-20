@@ -110,11 +110,13 @@ class TestPlayfield(unittest.TestCase):
     self.assertSequenceEqual(trace.tolist(), [13, 0, -1, 3, 0, -3, 2, 0, 1])
 
   def test_possibilities_2(self):
+    # Currently not working! Needs checking! Implementation not finished.
     playfield2 = Playfield(create_testing_array_s2_without_dropping_piece())
     res = playfield2.possibilities()
     self.assertSequenceEqual(res.tolist(), [ 3,  4,  5,  7,  8, 11, 14, 15, 19, 21, 22])
 
   def test_possibilities_3(self):
+    # Currently not working! Needs checking! Implementation not finished.
     playfield = Playfield.empty()
     res = playfield.possibilities()
     # on an empty board S (14) and Z (10) are not ideal

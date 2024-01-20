@@ -13,6 +13,9 @@ class Timer:
     """
     self.start_time = time.time() * 1000
 
+  def time_passed(self):
+    return time.time() * 1000 - self.start_time
+
   def wait_then_restart(self):
     """
     Stops processing (waits) until time of
@@ -24,7 +27,7 @@ class Timer:
     aware that this is always an
     approximation.
     """
-    time_passed = time.time() * 1000 - self.start_time
+    time_passed = self.time_passed()
     if (time_passed < 50):
       time.sleep((self.delay - time_passed) / 1000)
     self.start()

@@ -4,6 +4,7 @@ from mss import mss
 from PIL import Image
 import numpy as np
 from tetristracker.image.image_manipulator import trim
+from tetristracker.helpers.config import Config
 
 class BoundingBoxWidget(object):
     """
@@ -15,7 +16,8 @@ class BoundingBoxWidget(object):
 
     def __init__(self):
         sct = mss()
-        monitor_screenshot = sct.grab(monitor=sct.monitors[0])
+        print(sct.monitors[0])
+        monitor_screenshot = sct.grab(sct.monitors[0])
         monitor_screenshot = np.array(Image.fromarray(np.array(monitor_screenshot)).convert("RGB"))
 
         self.original_image = monitor_screenshot
@@ -56,16 +58,13 @@ class BoundingBoxWidget(object):
                                                                     width,
                                                                     height))
 
-            with open('config.yml', 'r') as file:
-                configs = yaml.safe_load(file)
+            bounding_box = {'top': self.image_coordinates[0][1],
+                            'left': self.image_coordinates[0][0],
+                            'width': self.image_coordinates[1][0] - self.image_coordinates[0][0],
+                            'height': self.image_coordinates[1][1] - self.image_coordinates[0][1]}
 
-            configs['bounding_box']['top'] = top
-            configs['bounding_box']['left'] = left
-            configs['bounding_box']['width'] = width
-            configs['bounding_box']['height'] = height
-
-            with open('config.yml', 'w') as file:
-                yaml.dump(configs, file)
+            config = Config()
+            config.set_bounding_box(bounding_box)
 
             # Draw rectangle
             cv2.rectangle(self.clone, self.image_coordinates[0], self.image_coordinates[1], (36,255,12), 2)

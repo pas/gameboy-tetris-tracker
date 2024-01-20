@@ -1,3 +1,5 @@
+import json
+
 import PySimpleGUI as sg
 
 from tetristracker.commasv.sqlite_reader import SqliteReader
@@ -46,19 +48,23 @@ class ReplayWindow(Window):
       self._save_replay()
 
   def _save_replay(self):
-    replay = ReplayCreator(self.round, self.index)
-    replay.save("screenshots/replay.txt")
+    if(self.creator):
+      with open("screenshots/replay.txt", "w") as file:
+        file.write(json.dumps(self.creator.create()))
 
   def _next(self):
     if(self.round != None):
       if(self.index < len(self.round)-1):
-        self._update_image(self.index+1)
+        self._update(self.index+1)
 
   def _previous(self):
     if(self.round != None):
       if(self.index > 0):
-        self._update_image((self.index-1))
+        self._update((self.index-1))
 
+  def _update(self, new_index):
+    self.creator.set_start_index(new_index)
+    self._update_image(new_index)
 
   def _update_image(self, index):
     self.index = index
@@ -75,6 +81,7 @@ class ReplayWindow(Window):
       round = reader.get_round(str(selected))
       if(len(round) > 0):
         self.round = round
+        self.creator = ReplayCreator(self.round, 0)
         self._update_image(0)
 
   def finalize(self):

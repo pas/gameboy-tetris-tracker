@@ -66,7 +66,7 @@ class SequentialNumberProcessor(OCRProcessor):
     number_string = ""
     for tile_image in image[0]:
       tile = Tile(tile_image)
-      if(not tile.is_white()):
+      if(not tile.is_white(threshhold=0.77)):
         processor = DigitProcessor(tile_image)
         number_string += str(processor.get_number())
 
@@ -76,6 +76,8 @@ class NumberProcessor(OCRProcessor):
   """
   Processes images holding numbers
   with one or more digits
+  This is actually not used anymore.
+  We are only using the SequentialNumberProcessor
   """
   def _ocr(self, image):
     # Run tesseract in single word mode (--psm=8)

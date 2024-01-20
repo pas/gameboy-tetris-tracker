@@ -8,8 +8,11 @@ def get_slope(X, Y):
   return np.polyfit(X, Y, 1)[0]
 
 
+def number_to_hex_string(number):
+  return f'{number:02x}'.upper()
+
 def number_to_image_path(number):
-  hex_number = f'{number:02x}'.upper()
+  hex_number = number_to_hex_string(number)
   return "images/tiles/" + hex_number + ".png"
 
 def tile_number_to_image_number(tile_nr):
