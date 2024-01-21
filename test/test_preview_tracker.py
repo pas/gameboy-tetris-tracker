@@ -1,8 +1,5 @@
 import unittest
 
-import numpy as np
-from PIL import Image
-
 from test.helpers import create_gameboy_view_processor_with
 from tetristracker.processor.preview_processor import PreviewProcessor
 from tetristracker.tile.tile_recognizer import TileRecognizer

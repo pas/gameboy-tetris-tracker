@@ -12,6 +12,7 @@ from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.image.image_saver import ImageSaver
 from tetristracker.processor.number_processor import SequentialNumberProcessor
 from tetristracker.processor.playfield_processor import PlayfieldProcessor
+from tetristracker.stats.stats import Stats
 from tetristracker.tile.tile import Tile
 from tetristracker.unit.playfield import Playfield
 from tetristracker.processor.preview_processor import SpawningProcessor, PreviewProcessor
@@ -96,6 +97,7 @@ class Round:
     self.level_tracker : LevelTracker = LevelTracker()
     self.preview_tracker : PreviewTracker = PreviewTracker()
     self.playfield_tracker : PlayfieldTracker = PlayfieldTracker()
+    self.stats = Stats()
     self.saver = saver
     self.plotter = plotter
     self.game = game
@@ -202,6 +204,7 @@ class Round:
     print("Score: " + str(self.start_level) + " to " + str(self.score_tracker.last()))
     print("Level: " + str(self.start_level) + " to " + str(self.level_tracker.last()))
     print("Lines: " + str(self.start_lines) + " to " + str(self.lines_tracker.last()))
+    print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
 
   def prepare(self):
     """
@@ -249,9 +252,10 @@ class Round:
       self.saver.save(self.processor.original_image)
 
       score = self.score(self.processor)
+      print("Raw Score: " + str(score))
       self.score_tracker.track(score)
 
-      print("Score: " + str(self.score_tracker.last()))
+      print("Tracked Score: " + str(self.score_tracker.last()))
       # This is only here to collect images that
       # could not get detected correctly
       # This should not happen
@@ -272,6 +276,9 @@ class Round:
 
       #calculate statistics
       clean_playfield = self.playfield_tracker.clean_playfield()
+      self.stats.calculate(self.lines_tracker, self.score_tracker, self.level_tracker)
+      print(self.stats.get_tetris_rate())
+      print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
       #if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
         #print(Playfield(clean_playfield).parity())
 

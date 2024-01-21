@@ -4,6 +4,8 @@ This project is in an early prototyping phase. You will need to tweek it to make
 
 This project came to light during a conversation with Tolstoj. Many ideas where either directly provided by Tolstoj or are derivates of those ideas. All tile images where provided by him! Thanks a lot!
 
+Currentlyy everything done in is project is free to use but no guarantees given for anything.
+
 ## Preconditions
 You'll need to have tesseract installed. 
 
