@@ -14,7 +14,7 @@ class Check:
   def __init__(self, config_file="config.yml"):
     with open('../config.yml', 'r') as config_file:
       self.configs = yaml.safe_load(config_file)
-      self.bounding_box = self.configs["bounding_box"]
+      self.bounding_box = self.configs["screen"]["bounding_box"]
       self.capturer = MSSCapturer(self.bounding_box)
 
   def grab_and_write_image(self, numbering=0, postfix=""):

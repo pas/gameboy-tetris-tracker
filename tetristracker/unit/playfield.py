@@ -39,13 +39,19 @@ class Playfield():
     self.in_transition = in_transition
 
   def full_row_replacement(self):
+    """
+    This removes full lines from
+    the playfield if they
+    are not grey.
+    :return:
+    """
     # binarize array
     array = self.all_but(TileRecognizer.GREY).binarize()
     # then sum each row
     summed_rows = np.sum(array, axis=1)
     # get indices with full row (10)
     self.line_clear_count = (summed_rows == 10).sum()
-    self.playfield_array[summed_rows == 10] = -99
+    self.playfield_array[summed_rows == 10] = TileRecognizer.EMPTY
 
   def is_line_clear(self):
     return self.line_clear_count > 0
@@ -62,6 +68,7 @@ class Playfield():
     one type of mino.
     Returns False it the playfield is white
     or holds multiple types of minos.
+
     This simplifies the i to the same
     minos so each of them is counted
     as the same mino (which is normally
@@ -167,7 +174,9 @@ class Playfield():
   def difference(self, playfield : Self):
     """
     Returns a play field with all overlapping
-    elements removed. This does not care if
+    elements removed.
+
+    This does not care if
     the overlapping elements are the same
     mino or not.
     """
@@ -177,9 +186,12 @@ class Playfield():
 
   def is_equal(self, previous_playfield : Self):
     """
+    Calculates an exact playfield difference
+    If difference is zero then this is true.
+    False otherwise.
+
     This does not take into account the cleared
-    line. Calculates an exact playfield difference
-    and it is zero then this is true
+    line.
     """
     summed_difference = (self.playfield_array - previous_playfield.playfield_array).sum()
     return summed_difference == 0
@@ -209,11 +221,11 @@ class Playfield():
   def binarize(self):
     """
     Does create a binary array. Where 1 is
-    any mino and 0 is white
+    any mino and 0 is white/empty
     """
     array = self.playfield_array.copy()
-    array[array > -99] = 1
-    array[array == -99] = 0
+    array[array != TileRecognizer.EMPTY] = 1
+    array[array == TileRecognizer.EMPTY] = 0
     return array
 
   def recreate(self, path):

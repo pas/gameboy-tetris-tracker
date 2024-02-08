@@ -3,6 +3,8 @@ import yaml
 from mss import mss
 from PIL import Image
 import numpy as np
+
+from tetristracker.capturer.simple_camera_capturer import SimpleCameraCapturer
 from tetristracker.image.image_manipulator import trim
 from tetristracker.helpers.config import Config
 
@@ -14,14 +16,14 @@ class BoundingBoxWidget(object):
     CC BY-SA 4.0 (by StackOverflow)
     """
 
-    def __init__(self):
-        sct = mss()
-        print(sct.monitors[0])
-        monitor_screenshot = sct.grab(sct.monitors[0])
-        monitor_screenshot = np.array(Image.fromarray(np.array(monitor_screenshot)).convert("RGB"))
+    def __init__(self, config):
+        self.config = config
+
+        monitor_screenshot = self.create_image()
 
         self.original_image = monitor_screenshot
         self.clone = self.original_image.copy()
+
 
         print("Select by click and drag from the top left to the bottom right. Make sure there"
               + " is a distinguishable black border around the image. This gives the best results.")
@@ -31,6 +33,23 @@ class BoundingBoxWidget(object):
 
         # Bounding box reference points
         self.image_coordinates = []
+
+    def create_image(self):
+        if(self.config.get_capturer() == "screen"):
+            return self.retrieve_screenshot_mss()
+        if(self.config.get_capturer() == "obs"):
+            return self.retrieve_camera_image()
+
+    def retrieve_camera_image(self):
+        capturer = SimpleCameraCapturer(self.config.get_obs_camera_index(), self.config.get_obs_camera_api())
+        capturer.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        capturer.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        return capturer.grab_image()
+
+    def retrieve_screenshot_mss(self):
+        sct = mss()
+        monitor_screenshot = sct.grab(sct.monitors[0])
+        return np.array(Image.fromarray(np.array(monitor_screenshot)).convert("RGB"))
 
     def extract_coordinates(self, event, x, y, flags, parameters):
         # Record starting (x,y) coordinates on left mouse button click
@@ -63,8 +82,10 @@ class BoundingBoxWidget(object):
                             'width': self.image_coordinates[1][0] - self.image_coordinates[0][0],
                             'height': self.image_coordinates[1][1] - self.image_coordinates[0][1]}
 
-            config = Config()
-            config.set_bounding_box(bounding_box)
+            if self.config.get_capturer() == "screen":
+                self.config.set_screen_bounding_box(bounding_box)
+            if self.config.get_capturer() == "obs":
+                self.config.set_obs_bounding_box(bounding_box)
 
             # Draw rectangle
             cv2.rectangle(self.clone, self.image_coordinates[0], self.image_coordinates[1], (36,255,12), 2)
@@ -81,8 +102,8 @@ class BoundingBoxWidget(object):
         return self.clone[self.image_coordinates[0][1]:self.image_coordinates[1][1],
                   self.image_coordinates[0][0]:self.image_coordinates[1][0]].copy()
 
-def run():
-    boundingbox_widget = BoundingBoxWidget()
+def run(config):
+    boundingbox_widget = BoundingBoxWidget(config)
     cv2.imshow('image', boundingbox_widget.show_image())
     # This needs some work...
     try:

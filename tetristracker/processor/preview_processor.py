@@ -7,8 +7,8 @@ from tetristracker.tile.tiler import Tiler
 
 class AreaProcessor():
   """
-  This processor recognizes if one piece (and
-  only one piece) can be found in a specific area.
+  This processor recognizes if one kind of mino (and
+  only one kind) can be found in a specified area.
   """
   def __init__(self, image, tiles_height, tiles_width, image_is_tiled=False):
     self.original_image = np.array(image)
@@ -30,12 +30,12 @@ class AreaProcessor():
 
   def run(self, save_tiles=False):
     """
-    Sets the ambigous flag if there the preview
+    Sets the ambigous flag if the preview
     consists not of exactly two tiles. A white
     tile and a mino.
     The ambigous flag is therefor set probably
-    to either the game is on pause (then the
-    preview is completly white) or a
+    either if the game is on pause (then the
+    preview is completly white) or on a
     transition (then more than one mino
     gets recognized).
     """

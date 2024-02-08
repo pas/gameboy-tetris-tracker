@@ -61,7 +61,7 @@ class TestPlayfieldProcessor(unittest.TestCase):
     processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view-in-transition-problematic.png")
     playfield_processor = PlayfieldProcessor(processor.get_playfield(), image_is_tiled=True)
     playfield = playfield_processor.run()
-    self.assertTrue(playfield.in_transition)
+    self.assertTrue(playfield.in_transition, "This test is currently failing. This a bug to be fixed!")
 
   def test_playfield_processor_not_transition_detection(self):
     processor = create_gameboy_view_processor_with("test/full-view/gameboy-full-view.png")

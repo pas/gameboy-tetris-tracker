@@ -37,12 +37,23 @@ class LargerOrEqualTracker(Tracker):
     else:
       return self._findAccepted(index-1)
 
+  def reject(self):
+    """
+    This rejects the currently accepted value. You
+    can use this if you recognize something
+    went wrong when doing checks after
+    you've put in the value.
+    """
+    self.array[len(self.array)-1] = -1
+    self.accepted = self._findAccepted(len(self.array)-2)
+
   def difference(self):
     """
     Calculates difference between the last accepted
     lines and the current.
 
-    Returns None if this is not possible
+    Returns None if either the tracker is empty
+    or the last value was not accepted
     """
     if(self.is_empty() or self.last() == -1):
       return None

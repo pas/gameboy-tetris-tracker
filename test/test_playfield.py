@@ -113,14 +113,14 @@ class TestPlayfield(unittest.TestCase):
     # Currently not working! Needs checking! Implementation not finished.
     playfield2 = Playfield(create_testing_array_s2_without_dropping_piece())
     res = playfield2.possibilities()
-    self.assertSequenceEqual(res.tolist(), [ 3,  4,  5,  7,  8, 11, 14, 15, 19, 21, 22])
+    self.assertSequenceEqual(res.tolist(), [ 3,  4,  5,  7,  8, 11, 14, 15, 19, 21, 22], "This test is currentlty failing as implementation not finished")
 
   def test_possibilities_3(self):
     # Currently not working! Needs checking! Implementation not finished.
     playfield = Playfield.empty()
     res = playfield.possibilities()
     # on an empty board S (14) and Z (10) are not ideal
-    self.assertSequenceEqual(res.tolist(), [2, 3, 5, 6, 8, 20, 22])
+    self.assertSequenceEqual(res.tolist(), [2, 3, 5, 6, 8, 20, 22], "This test is currentlty failing as implementation not finished")
 
   def test_parity(self):
     playfield = Playfield(create_testing_array_s2())

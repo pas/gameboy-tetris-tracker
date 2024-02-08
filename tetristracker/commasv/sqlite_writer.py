@@ -18,6 +18,12 @@ class SqliteWriter(Writer):
                      "tetromino_in_play INTEGER, "
                      "spawned BOOLEAN, "
                      "playfield TEXT);")
+    self.id = self._create_id()
+
+  def _create_id(self):
+    return int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+
+  def restart(self):
     self.id = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
 
   def write(self, score : int, lines : int, level : int, preview : int, tetromino_in_play : int, spawned : bool, playfield):

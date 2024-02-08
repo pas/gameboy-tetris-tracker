@@ -1,19 +1,27 @@
-bounding_box:
-  height: 1000
-  left: 2000
-  top: 3000
-  width: 4000
 capturer: screen
 highscores:
   level9: 556084
   level9hearth: 125840
   levelk: 97020
-interceptor_capturer:
-  camera: 2
-obs_virtual_cam_capturer:
+interceptor:
+  camera:
+    api: 700
+    index: 0
+mode: score
+obs:
   bounding_box:
-    height: 669
-    left: 1764
-    top: 190
-    width: 743
-  camera: 2
+    height: 468
+    left: 75
+    top: 126
+    width: 519
+  camera:
+    api: 700
+    index: 2
+plotter: piece_distribution
+rom_version: gamescom
+screen:
+  bounding_box:
+    height: 1000
+    left: 2000
+    top: 3000
+    width: 4000

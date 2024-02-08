@@ -18,9 +18,7 @@ class TestLinesTracker(unittest.TestCase):
   def test_not_accepted_first_lines(self):
     tracker = LinesTracker()
     tracker.track(None)
-    # TODO: This feels like an odd behaviour as a -1 does not get accepted ever
-    # TODO: I feel like this should be None
-    self.assertEqual(tracker.accepted, -1)
+    self.assertIsNone(tracker.accepted)
     self.assertFalse(tracker.is_empty())
     self.assertFalse(tracker.has_changed())
     self.assertFalse(tracker.is_accepted())

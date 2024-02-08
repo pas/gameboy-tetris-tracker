@@ -9,9 +9,9 @@ from tetristracker.processor.playfield_processor import PlayfieldProcessor
 from tetristracker.processor.preview_processor import PreviewProcessor
 
 
-def create_gameboy_view_processor_with(path):
+def create_gameboy_view_processor_with(path, shift_score=False):
   image = np.array(Image.open(path).convert('RGB'))
-  return GameboyViewProcessor(image)
+  return GameboyViewProcessor(image, shift_score=shift_score)
 
 
 def get_preview(processor):

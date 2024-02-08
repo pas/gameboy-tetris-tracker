@@ -1,16 +1,17 @@
 import yaml
 
 from tetristracker.game import Game
-from tetristracker.plotter import Plotter
 
 
 class Runner:
-  def __init__(self, capturer):
+  def __init__(self, capturer, writer, plotter, shift_score=False):
       self.capturer = capturer
-      self.plotter = Plotter()
+      self.plotter = plotter
+      self.writer = writer
+      self.shift_score = shift_score
 
   def run(self):
-    game = Game(self.capturer, self.plotter)
+    game = Game(self.capturer, self.plotter, self.writer, shift_score=self.shift_score)
     game.start()
 
 if __name__ == "__main__":

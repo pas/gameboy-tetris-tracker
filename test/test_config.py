@@ -16,19 +16,19 @@ class TestConfig(unittest.TestCase):
   def _init_config(self):
     return Config("test/temp-test-config.yml")
 
-  def test_get_bounding_box(self):
+  def test_get_screen__bounding_box(self):
       config = self._init_config()
-      bounding_box = config.get_bounding_box()
+      bounding_box = config.get_screen_bounding_box()
 
       self.assertEqual(1000, bounding_box["height"])
       self.assertEqual(2000, bounding_box["left"])
       self.assertEqual(3000, bounding_box["top"])
       self.assertEqual(4000, bounding_box["width"])
 
-  def test_set_bounding_box(self):
+  def test_set_screen_bounding_box(self):
     bounding_box = { 'top' : 100, 'left' : 200, 'width': 300, 'height': 400 }
     config = self._init_config()
-    config.set_bounding_box(bounding_box)
+    config.set_screen_bounding_box(bounding_box)
 
   def test_get_capturer(self):
       config = self._init_config()

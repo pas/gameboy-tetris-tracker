@@ -7,3 +7,10 @@ class Writer:
   @abstractmethod
   def write(self, score, lines, level, preview, playfield):
     pass
+
+  @abstractmethod
+  def restart(self):
+    """
+    Resets the id
+    """
+    pass

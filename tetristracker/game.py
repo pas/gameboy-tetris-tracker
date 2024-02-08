@@ -7,6 +7,7 @@ from PIL import Image
 
 from tetristracker.commasv.csv_writer import CSVWriter
 from tetristracker.commasv.sqlite_writer import SqliteWriter
+from tetristracker.commasv.writer import Writer
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.image.image_saver import ImageSaver
@@ -26,11 +27,13 @@ from tetristracker.helpers.timer import Timer
 
 class Game:
   MIN_WAIT_TIME = 50
-  def __init__(self, capturer, plotter):
+  def __init__(self, capturer, plotter, writer, shift_score=False):
     self.round = None
     self.capturer = capturer
     self.timer = Timer()
     self.plotter = plotter
+    self.writer = writer
+    self.shift_score = shift_score # I really don't like this here :(
 
   def is_running(self, processor):
     """
@@ -43,17 +46,20 @@ class Game:
     # within Round (or we have to set it
     # up differently...)
     tile = processor.get_top_left_tile()
-    cv2.imwrite("direct_image.png", processor.original_image)
-    cv2.imwrite("direct_tile.png", tile.tile_image)
+    #cv2.imwrite("direct_image.png", processor.original_image)
+    #cv2.imwrite("direct_tile.png", tile.tile_image)
     return tile.is_black()
 
   def force_stop(self):
     thread = threading.current_thread()
-    return thread.stopped()
+    if callable(getattr(thread, "stopped", None)):
+      return thread.stopped()
+    else:
+      return False
 
   def get_gameboy_view_processor(self):
     image = self.capturer.grab_image()
-    return GameboyViewProcessor(image)
+    return GameboyViewProcessor(image, shift_score=self.shift_score)
 
   def state_machine(self):
     while not self.force_stop():
@@ -64,7 +70,7 @@ class Game:
 
   def run(self):
     saver = ImageSaver("screenshots/debug/", "running")
-    self.round = Round(self, saver, self.plotter)
+    self.round = Round(self, saver, self.plotter, self.writer)
     self.round.start(self.processor)
     self.processor = self.get_gameboy_view_processor()
 
@@ -85,8 +91,9 @@ class Game:
       self.timer.wait_then_restart()
 
 class Round:
-  def __init__(self, game, saver, plotter):
-    self.csv_file = SqliteWriter() #CSVWriter()
+  def __init__(self, game, saver, plotter, writer : Writer):
+    self.csv_file = writer
+    self.csv_file.restart()
 
     self.start_scores = 0
     self.start_lines = 0
@@ -111,10 +118,14 @@ class Round:
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
     result = preview_processor.run()
     if(preview_processor.ambiguous):
-      result = -1
+      result = None
     return result
 
   def spawning(self, processor):
+    """
+    This never worked out because the piece does not
+    stay long enough in the spawning area
+    """
     spawning_image = processor.get_spawning_area()
     spawning_processor = SpawningProcessor(spawning_image, image_is_tiled=True)
     result = spawning_processor.run()
@@ -181,18 +192,29 @@ class Round:
     # minos and whites return the same result
     continue_image = self.processor.get_continue()
     break_as_number = self.numbers(continue_image)
-    return break_as_number == 471806 or break_as_number == 871806
+    return (break_as_number == 471806
+            or break_as_number == 871806
+            or break_as_number == 11005)
 
-  def pause(self):
+  def is_over(self):
+    # this is a very brittle hack. We just hope
+    # that not another combination of
+    # minos and whites return the same result
+    please_image = self.processor.get_please()
+    please_as_number = self.numbers(please_image)
+    return please_as_number == 116956
+
+  def idle(self):
+    print("Game is idle")
     self.timer.start()
-    while self.is_paused():
+    while (self.is_paused() or self.is_over()) and not self.game.force_stop():
       self.timer.wait_then_restart()
       self.prepare()
 
   def state_machine(self):
     while(self.game.is_running(self.processor) and not self.game.force_stop()):
-      if(self.is_paused()):
-        self.pause()
+      if(self.is_paused() or self.is_over()):
+        self.idle()
       elif(self.is_blending()):
         self.retake()
       else:
@@ -201,7 +223,9 @@ class Round:
     self.finish()
 
   def finish(self):
-    print("Score: " + str(self.start_level) + " to " + str(self.score_tracker.last()))
+    print(self.preview_tracker.stats)
+
+    print("Score: " + str(self.start_score) + " to " + str(self.score_tracker.last()))
     print("Level: " + str(self.start_level) + " to " + str(self.level_tracker.last()))
     print("Lines: " + str(self.start_lines) + " to " + str(self.lines_tracker.last()))
     print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
@@ -246,11 +270,16 @@ class Round:
     """
     self.timer.start()
 
-    while self.game.is_running(self.processor) and not self.game.force_stop() and not self.is_paused() and not self.is_blending():  # Something like not processor.get_top_left_tile().is_black()
+    while (self.game.is_running(self.processor)
+          and not self.game.force_stop()
+          and not self.is_paused()
+          and not self.is_blending()
+          and not self.is_over()):  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
       # by not saving every image but it only needs like 14 miliseconds
       self.saver.save(self.processor.original_image)
 
+      print("")
       score = self.score(self.processor)
       print("Raw Score: " + str(score))
       self.score_tracker.track(score)
@@ -277,13 +306,12 @@ class Round:
       #calculate statistics
       clean_playfield = self.playfield_tracker.clean_playfield()
       self.stats.calculate(self.lines_tracker, self.score_tracker, self.level_tracker)
-      print(self.stats.get_tetris_rate())
       print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
-      #if(not np.isnan(np.array(clean_playfield, dtype=np.float)).any()):
-        #print(Playfield(clean_playfield).parity())
+      if(not np.isnan(np.array(clean_playfield, dtype=float)).any()):
+        print("Paritiy: " + str(Playfield(clean_playfield).parity()))
 
 
-      self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array)
+      self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
 
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
                           self.preview_tracker.last(), self.preview_tracker.spawned_piece, self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)

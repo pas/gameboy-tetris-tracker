@@ -10,9 +10,10 @@ class GameboyViewProcessor():
   nr_of_tiles_width = 20
   nr_of_tiles_height = 18
 
-  def __init__(self, image, save_tiles=False):
+  def __init__(self, image, shift_score=False, save_tiles=False):
     self.original_image = np.array(image)
     self.tiled_image = self._tile_image()
+    self.shift_score = shift_score
     self._run(save_tiles=save_tiles)
 
   def _tile_image(self):
@@ -33,6 +34,9 @@ class GameboyViewProcessor():
   def get_continue(self):
     return self.tiled_image[9:10, 3:11].copy()
 
+  def get_please(self):
+    return self.tiled_image[12:13, 3:9].copy()
+
   def get_spawning_area(self):
     return self.tiled_image[1:3, 5:9].copy()
 
@@ -43,7 +47,10 @@ class GameboyViewProcessor():
     return self.tiled_image[13:17, 15:19].copy()
 
   def get_score(self):
-    return self.tiled_image[3:4, 13:19].copy()
+    if self.shift_score:
+      return self.tiled_image[3:4, 14:20].copy()  # gamescom
+    else:
+      return self.tiled_image[3:4, 13:19].copy()
 
   def get_lines(self):
     return self.tiled_image[10:11, 15:18].copy()

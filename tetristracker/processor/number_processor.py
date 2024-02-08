@@ -66,7 +66,7 @@ class SequentialNumberProcessor(OCRProcessor):
     number_string = ""
     for tile_image in image[0]:
       tile = Tile(tile_image)
-      if(not tile.is_white(threshhold=0.77)):
+      if not tile.is_white(threshhold=0.77):
         processor = DigitProcessor(tile_image)
         number_string += str(processor.get_number())
 

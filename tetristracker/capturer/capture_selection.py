@@ -1,16 +1,19 @@
-import yaml
-
 from tetristracker.capturer.mss_capturer import MSSCapturer
 from tetristracker.capturer.interceptor_capturer import InterceptorCapturer
 from tetristracker.capturer.obs_virtual_cam_capturer import OBSVirtualCamCapturer
-
+from tetristracker.helpers.config import Config
 
 class CaptureSelection:
-  def __init__(self):
+  def __init__(self, config : Config):
     self.capturer = None
     self.name = ""
+    self.config = config
 
-  def build(self, name):
+  def get(self):
+    return self.capturer
+
+  def select(self, name):
+    print(name)
     if(name == "interceptor"):
       self.select_interceptor()
     if(name == "screen"):
@@ -20,18 +23,14 @@ class CaptureSelection:
 
   def select_interceptor(self):
     self.name = "interceptor"
-    self.capturer = InterceptorCapturer(create_temp_dir=False)
+    self.capturer = InterceptorCapturer(self.config, create_temp_dir=False)
 
-  def select_screen(self, config="config.yml"):
+  def select_screen(self):
     self.name = "screenshot"
-    with open(config, 'r') as config_file:
-      self.configs = yaml.safe_load(config_file)
-      bounding_box = self.configs["bounding_box"]
-      self.capturer = MSSCapturer(bounding_box)
+    bounding_box = self.config.get_screen_bounding_box()
+    self.capturer = MSSCapturer(bounding_box)
 
-  def select_obs_virtual_cam(self, config="config.yml"):
-    self.name = "obs_virtual_cam"
-    with open(config, 'r') as config_file:
-      self.configs = yaml.safe_load(config_file)
-      bounding_box = self.configs["obs_virtual_cam_capturer"]["bounding_box"]
-      self.capturer = OBSVirtualCamCapturer(bounding_box, create_temp_dir=False)
+  def select_obs_virtual_cam(self):
+    self.name = "obs"
+    bounding_box = self.config.get_obs_bounding_box()
+    self.capturer = OBSVirtualCamCapturer(bounding_box, self.config, create_temp_dir=False)
