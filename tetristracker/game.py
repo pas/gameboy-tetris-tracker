@@ -1,6 +1,6 @@
 import threading
 import time
-from collections.abc import Callable
+from abc import abstractmethod
 from queue import Queue
 
 import cv2
@@ -9,8 +9,6 @@ from PIL import ImageOps
 from PIL import Image
 
 from tetristracker.capturer.capture_selection import CaptureSelection
-from tetristracker.commasv.csv_writer import CSVWriter
-from tetristracker.commasv.sqlite_writer import SqliteWriter
 from tetristracker.commasv.writer import Writer
 from tetristracker.helpers.config import Config
 from tetristracker.image.gameboy_image import GameboyImage
@@ -31,96 +29,81 @@ from tetristracker.helpers.timer import Timer
 from tetristracker.global_vars import images_queue, gameboyview_queue
 
 
-def put_queue(queue : Queue, callable : Callable):
-  while(True):
-    start_run = time.perf_counter()
-    time.sleep(throddle) # we might slightly throttle this if we are too fast at capturing
+class Get():
+  @abstractmethod
+  def get(self):
+    pass
 
-    queue.put(callable(), block=False)
 
-    # Timing the consumation and then adjust our throdding time
-    if(images_queue.full()):
-      start = time.perf_counter()
-      while(images_queue.full()):
-        pass
-      end = time.perf_counter()
-      passed = end-start
+def put_queue(queue: Queue, callable: Get, time_it=False):
+  while (True):
+    if time_it: start_run = time.perf_counter()
 
-      # increase by 10 % of the overshoot
-      throddle = throddle + (passed-throddle)*0.1 # is throddle always smaller?
-    else:
-      # slightly reduce time by 0.1%
-      throddle= throddle - throddle*0.001
-      if (throddle < 0):
-        throddle = 0
+    queue.put(callable.get())
 
-    end_run = time.perf_counter()
-    print("Passed per run: " + str(end_run-start_run))
+    if time_it: end_run = time.perf_counter()
+    if time_it: print("Passed per run: " + str(end_run - start_run))
+
+
+class ImageCaptureGet(Get):
+  def __init__(self):
+    config = Config()
+
+    # create capturer (this seems to have to be inside
+    # the local thread or else mss doesn't work)
+    capture_selection = CaptureSelection(config)
+    capture_selection.select(config.get_capturer())
+
+    capturer = capture_selection.get()
+
+    self.capturer = capturer
+
+  def get(self):
+    return self.capturer.grab_image()
+
+
+class GameboyViewGet(Get):
+  def __init__(self, shift_score, i_queue):
+    self.i_queue = images_queue
+    self.shift_score = shift_score
+    self.saver = ImageSaver("screenshots/debug/", "retrieved")
+
+  def get(self):
+    image = self.i_queue.get()
+    self.i_queue.task_done()
+    self.saver.save(image)
+    view = GameboyViewProcessor(image, shift_score=self.shift_score)
+    return view
+
 
 def capture():
   """
   Capturing images and put them into the
   queue
   """
-  config = Config()
-  throddle = 0
+  getter = ImageCaptureGet()
+  put_queue(images_queue, getter, time_it=False)
 
-  # create capturer (this seems to have to be inside
-  # the local thread or else mss doesn't work)
-  capture_selection = CaptureSelection(config)
-  capture_selection.select(config.get_capturer())
-
-  # TODO: Finish this!
-  capturer = capture_selection.get()
-  while(True):
-    start_run = time.perf_counter()
-    time.sleep(throddle) # we might slightly throttle this if we are too fast at capturing
-
-    image = capturer.grab_image()
-    images_queue.put(image, block=False)
-
-    # Timing the consumation and then adjust our throdding time
-    if(images_queue.full()):
-      start = time.perf_counter()
-      while(images_queue.full()):
-        pass
-      end = time.perf_counter()
-      passed = end-start
-
-      # increase by 10 % of the overshoot
-      throddle = throddle + (passed-throddle)*0.1 # is throddle always smaller?
-    else:
-      # slightly reduce time by 0.1%
-      throddle= throddle - throddle*0.001
-      if (throddle < 0):
-        throddle = 0
-
-    end_run = time.perf_counter()
-    print("Passed per run: " + str(end_run-start_run))
 
 def prepare(shift_score):
   """
   Prepare the captured images inside the queue.
   Put result into queue.
   """
+  getter = GameboyViewGet(shift_score, images_queue)
+  put_queue(gameboyview_queue, getter, time_it=True)
 
-  saver = ImageSaver("screenshots/debug/", "retrieved")
-  while(True):
-    image = images_queue.get()
-    images_queue.task_done()
-    saver.save(image)
-    view = GameboyViewProcessor(image, shift_score=shift_score)
-    gameboyview_queue.put(view)
 
 class Game:
   MIN_WAIT_TIME = 50
+
   def __init__(self, capturer, plotter, writer, shift_score=False):
     self.round = None
     self.capturer = capturer
     self.timer = Timer()
     self.plotter = plotter
     self.writer = writer
-    self.shift_score = shift_score # I really don't like this here :(
+    self.shift_score = shift_score  # I really don't like this here :(
 
   def is_running(self, processor):
     """
@@ -133,8 +116,8 @@ class Game:
     # within Round (or we have to set it
     # up differently...)
     tile = processor.get_top_left_tile()
-    #cv2.imwrite("direct_image.png", processor.original_image)
-    #cv2.imwrite("direct_tile.png", tile.tile_image)
+    # cv2.imwrite("direct_image.png", processor.original_image)
+    # cv2.imwrite("direct_tile.png", tile.tile_image)
     return tile.is_black()
 
   def force_stop(self):
@@ -145,14 +128,13 @@ class Game:
       return False
 
   def get_gameboy_view_processor(self):
-    # The taking of images is currently faster
-    # than the consuming of them. This fills up our queue...
-    # TODO: Fix this!
-    return gameboyview_queue.get()
+    view = gameboyview_queue.get()
+    gameboyview_queue.task_done()
+    return view
 
   def state_machine(self):
     while not self.force_stop():
-      if(self.is_running(self.processor)):
+      if (self.is_running(self.processor)):
         self.run()
       else:
         self.idle()
@@ -211,8 +193,9 @@ class Game:
       self.processor = self.get_gameboy_view_processor()
       self.timer.wait_then_restart()
 
+
 class Round:
-  def __init__(self, game, saver, plotter, writer : Writer):
+  def __init__(self, game, saver, plotter, writer: Writer):
     self.csv_file = writer
     self.csv_file.restart()
 
@@ -220,11 +203,11 @@ class Round:
     self.start_lines = 0
     self.start_level = 0
 
-    self.score_tracker : ScoreTracker = ScoreTracker()
-    self.lines_tracker : LinesTracker = LinesTracker()
-    self.level_tracker : LevelTracker = LevelTracker()
-    self.preview_tracker : PreviewTracker = PreviewTracker()
-    self.playfield_tracker : PlayfieldTracker = PlayfieldTracker()
+    self.score_tracker: ScoreTracker = ScoreTracker()
+    self.lines_tracker: LinesTracker = LinesTracker()
+    self.level_tracker: LevelTracker = LevelTracker()
+    self.preview_tracker: PreviewTracker = PreviewTracker()
+    self.playfield_tracker: PlayfieldTracker = PlayfieldTracker()
     self.stats = Stats()
     self.saver = saver
     self.plotter = plotter
@@ -238,7 +221,7 @@ class Round:
     preview_image = processor.get_preview()
     preview_processor = PreviewProcessor(preview_image, image_is_tiled=True)
     result = preview_processor.run()
-    if(preview_processor.ambiguous):
+    if (preview_processor.ambiguous):
       result = None
     return result
 
@@ -250,7 +233,7 @@ class Round:
     spawning_image = processor.get_spawning_area()
     spawning_processor = SpawningProcessor(spawning_image, image_is_tiled=True)
     result = spawning_processor.run()
-    if(spawning_processor.ambiguous):
+    if (spawning_processor.ambiguous):
       result = -1
     return result
 
@@ -261,8 +244,8 @@ class Round:
 
   def numbers(self, number_image):
     number_image = GameboyImage(number_image, number_image.shape[0], number_image.shape[1],
-                               number_image.shape[2], number_image.shape[3], is_tiled=True)
-    #number_image.untile()
+                                number_image.shape[2], number_image.shape[3], is_tiled=True)
+    # number_image.untile()
     number_processor = SequentialNumberProcessor(number_image.image)
     return number_processor.get_number()
 
@@ -286,7 +269,7 @@ class Round:
 
     # We want to have a clean image at the
     # start
-    if(self.is_blending()):
+    if (self.is_blending()):
       # Retakes an image until no blending is visible
       self.retake()
 
@@ -296,14 +279,13 @@ class Round:
     self.start_level, is_heart = self.level(self.processor)
     self.start_lines = self.lines(self.processor)
 
-    #write current state to database
-    only_one, mino  = self.playfield.only_one_type_of_mino()
-    if(only_one):
+    # write current state to database
+    only_one, mino = self.playfield.only_one_type_of_mino()
+    if (only_one):
       self.preview_tracker.force_count(mino)
       start_preview = self.preview(self.processor)
       self.csv_file.write(self.start_score, self.start_lines, self.start_level,
                           start_preview, mino, True, self.playfield.playfield_array)
-
 
     self.state_machine()
 
@@ -333,10 +315,10 @@ class Round:
       self.prepare()
 
   def state_machine(self):
-    while(self.game.is_running(self.processor) and not self.game.force_stop()):
-      if(self.is_paused() or self.is_over()):
+    while (self.game.is_running(self.processor) and not self.game.force_stop()):
+      if (self.is_paused() or self.is_over()):
         self.idle()
-      elif(self.is_blending()):
+      elif (self.is_blending()):
         self.retake()
       else:
         self.run()
@@ -366,16 +348,15 @@ class Round:
     """
     # This currently needs almost three seconds...
     self.processor = self.game.get_gameboy_view_processor()
-    #self.saver.save(self.processor.original_image)
+    # self.saver.save(self.processor.original_image)
     self.playfield = self.get_playfield()
-
 
   def retake(self):
     """
     Immediately retake the image if we stumbled upon
     a playfield with blending
     """
-    while(self.is_blending()):
+    while (self.is_blending()):
       self.prepare()
 
   def is_blending(self):
@@ -394,13 +375,13 @@ class Round:
     self.timer.start()
 
     while (self.game.is_running(self.processor)
-          and not self.game.force_stop()
-          and not self.is_paused()
-          and not self.is_blending()
-          and not self.is_over()):  # Something like not processor.get_top_left_tile().is_black()
+           and not self.game.force_stop()
+           and not self.is_paused()
+           and not self.is_blending()
+           and not self.is_over()):  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
       # by not saving every image but it only needs like 14 miliseconds
-      #self.saver.save(self.processor.original_image)
+      # self.saver.save(self.processor.original_image)
 
       print("")
       score = self.score(self.processor)
@@ -411,9 +392,10 @@ class Round:
       # This is only here to collect images that
       # could not get detected correctly
       # This should not happen
-      if(self.score_tracker.last() == -1):
+      if (self.score_tracker.last() == -1):
         print("stored debug image")
-        cv2.imwrite("screenshots/images_to_retrain/"+str(score)+".png", GameboyImage(self.processor.get_score()).untile())
+        cv2.imwrite("screenshots/images_to_retrain/" + str(score) + ".png",
+                    GameboyImage(self.processor.get_score()).untile())
 
         for tile in self.processor.get_score()[0]:
           bordered = Image.fromarray(tile)
@@ -426,18 +408,18 @@ class Round:
       self.playfield_tracker.track(self.playfield)
       self.preview_tracker.track(self.preview(self.processor), self.playfield_tracker)
 
-      #calculate statistics
+      # calculate statistics
       clean_playfield = self.playfield_tracker.clean_playfield()
       self.stats.calculate(self.lines_tracker, self.score_tracker, self.level_tracker)
       print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
-      if(not np.isnan(np.array(clean_playfield, dtype=float)).any()):
+      if (not np.isnan(np.array(clean_playfield, dtype=float)).any()):
         print("Paritiy: " + str(Playfield(clean_playfield).parity()))
-
 
       self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
 
       self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
-                          self.preview_tracker.last(), self.preview_tracker.spawned_piece, self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
+                          self.preview_tracker.last(), self.preview_tracker.spawned_piece,
+                          self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
 
       self.timer.wait_then_restart()
 
