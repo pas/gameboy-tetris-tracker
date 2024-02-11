@@ -51,6 +51,9 @@ class Stats():
 
       line_diff: int = lines_tracker.difference()
       if line_diff is not None and line_diff != 0:
+        # This is shortly after lines cleared animation
+        # The lines update after the lines cleared
+        # animation.
         score_diff = score_tracker.difference()
         level = level_tracker.last()
         if level_change:
@@ -89,6 +92,10 @@ class Stats():
       line_diff: int = lines_tracker.difference()
 
       if line_diff is not None and line_diff == 0:
+        # This is short after piece lock as
+        # push down points are immediately added
+        # to the score but we don't always have
+        # push down points
         score_diff = score_tracker.difference()
         print("Push Down Points: " + str(score_diff))
         # TODO: This should not be here but it felt like it was the best place
@@ -97,8 +104,4 @@ class Stats():
         if (score_diff > 20):
           print("Reject score value in after thought...")
           score_tracker.reject()
-      #else:
-        #max_lines = 200
-        #for index in range(20):
-          #self.scoring[3]
 

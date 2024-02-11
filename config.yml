@@ -18,10 +18,10 @@ obs:
     api: 700
     index: 2
 plotter: piece_distribution
-rom_version: gamescom
+rom_version: orig
 screen:
   bounding_box:
-    height: 700
-    left: 207
-    top: 205
-    width: 778
+    height: 471
+    left: 392
+    top: 630
+    width: 524

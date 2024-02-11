@@ -13,17 +13,18 @@ You'll need to have tesseract installed.
 This program was tested with version 5.3.1 of tesseract. You can download an installer by UB Mannheim for windows here: https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=A. Please make sure that the tesseract exe is in your path variable. 
 
 ## Python
-Run on version 3.10 of python.
+Run on version 3.11 of python.
 
 ## Packages
 mss 9.0.1
 matplotlib 3.8.0
-Pillow 10.0.1
-opencv-python 4.8.1.78
-numpy 1.26.0
+Pillow 10.2.0
+opencv-python 4.9.0.80
+numpy 1.26.4
 PyYAML 6.0.1
 PySimpleGUI 4.60.5
-pythesseract 0.3.10
+pytesseract 0.3.10
+typing_extensions 4.9.0
 
 ## Start the program 
 

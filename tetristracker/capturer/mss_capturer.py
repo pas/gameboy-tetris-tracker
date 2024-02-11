@@ -17,11 +17,7 @@ class MSSCapturer:
     pass
 
   def grab_image(self):
-    # TODO: Check if this lock is actually needed. I think this is a remnant from older times...
-    lock = Lock()
-    lock.acquire()
     screenshot = self.sct.grab(self.bounding_box)
-    lock.release()
     return np.array(Image.fromarray(np.array(screenshot)).convert('RGB'))
 
   def remove_border(self, image):

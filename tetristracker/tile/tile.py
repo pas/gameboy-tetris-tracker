@@ -9,26 +9,15 @@ class Tile:
   """
   STANDARD_WIDTH = 24
   STANDARD_HEIGHT = 24
+  THRESHOLD = 300
 
   def __init__(self, tile_image, column_nr=None, row_nr=None):
     self.tile_image = np.array(Image.fromarray(tile_image).convert('RGB').resize((Tile.STANDARD_WIDTH, Tile.STANDARD_HEIGHT), Image.Resampling.BOX))
-    #self._white_to_black_border()
     self.column_nr = column_nr
     self.row_nr = row_nr
 
   def store(self, path_and_name):
     cv2.imwrite(path_and_name, self.tile_image)
-
-  def _white_to_black_border(self):
-    """
-    Checks if image has white borders and recolors
-    them to black
-    """
-    image = self.tile_image
-    left_border = image[:,:1]
-    #right_border = image[:, :-1]
-    left_border[left_border==255] = 0
-    #right_border[right_border==255] = 0
 
   def brightness(self):
     """
@@ -49,6 +38,9 @@ class Tile:
     im = Image.fromarray(self.tile_image[border_height:Tile.STANDARD_HEIGHT-border_height, border_width:Tile.STANDARD_WIDTH-border_width]).convert('L')
     stat = ImageStat.Stat(im)
     return stat.rms[0]
+
+  def is_in_transition(self):
+    return not self.is_white() and self.get_min() > Tile.THRESHOLD
 
   def is_dull(self):
     """

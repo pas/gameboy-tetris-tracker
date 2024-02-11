@@ -15,7 +15,6 @@ class PlayfieldProcessor():
   ambigous state (e.g. it holds a
   blurred image)
   """
-  THRESHHOLD = 300
   needed_number_of_tiles_width = 10
   needed_number_of_tiles_height = 18
   names = ["J-mino", "Z-mino", "O-mino", "L-mino", "T-mino", "S-mino",
@@ -45,6 +44,8 @@ class PlayfieldProcessor():
 
     in_transition = False
 
+    # TODO: We could parallelize this as it is only working on each tile
+    # TODO: Tried it... did not work out...
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile_image in enumerate(column):
         tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
@@ -52,24 +53,11 @@ class PlayfieldProcessor():
         if (save_tiles):
           cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile.tile_image)
 
-        # If we detect a non-white tile where
-        # the minimum color (black) is above a
-        # certain threshold (the blackest pixel is not full black)
-        # then it is probably a tile that results from blurring between
-        # two states and therefor the playfield is in transition
-        if(not tile.is_white()):
-          if(tile.get_min() > PlayfieldProcessor.THRESHHOLD):
-            in_transition = True
-            if(return_on_transition):
-              return None
+        in_transition = tile.is_in_transition()
+        if(in_transition and return_on_transition):
+          return None
 
-        # If we detect a one-colored non-white, non-black tile then
-        # it's the line clear animation. We return such tiles
-        # as grey.We should probably move this into the tile recognizer
-        if(not tile.is_black() and not tile.is_white() and (tile.is_one_color() or tile.is_dull())):
-          result.append(TileRecognizer.GREY)
-        else:
-          result.append(self.recognizer.recognize(tile_image))
+        result.append(self.recognizer.recognize(tile_image))
 
     playfield = pf.Playfield(np.array(result).reshape(18, 10), in_transition=in_transition)
     playfield.full_row_replacement()

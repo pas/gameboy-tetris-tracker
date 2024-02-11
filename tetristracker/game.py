@@ -1,13 +1,18 @@
 import threading
+import time
+from collections.abc import Callable
+from queue import Queue
 
 import cv2
 import numpy as np
 from PIL import ImageOps
 from PIL import Image
 
+from tetristracker.capturer.capture_selection import CaptureSelection
 from tetristracker.commasv.csv_writer import CSVWriter
 from tetristracker.commasv.sqlite_writer import SqliteWriter
 from tetristracker.commasv.writer import Writer
+from tetristracker.helpers.config import Config
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.image.image_saver import ImageSaver
@@ -23,7 +28,89 @@ from tetristracker.tracker.lines_tracker import LinesTracker
 from tetristracker.tracker.score_tracker import ScoreTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
 from tetristracker.helpers.timer import Timer
+from tetristracker.global_vars import images_queue, gameboyview_queue
 
+
+def put_queue(queue : Queue, callable : Callable):
+  while(True):
+    start_run = time.perf_counter()
+    time.sleep(throddle) # we might slightly throttle this if we are too fast at capturing
+
+    queue.put(callable(), block=False)
+
+    # Timing the consumation and then adjust our throdding time
+    if(images_queue.full()):
+      start = time.perf_counter()
+      while(images_queue.full()):
+        pass
+      end = time.perf_counter()
+      passed = end-start
+
+      # increase by 10 % of the overshoot
+      throddle = throddle + (passed-throddle)*0.1 # is throddle always smaller?
+    else:
+      # slightly reduce time by 0.1%
+      throddle= throddle - throddle*0.001
+      if (throddle < 0):
+        throddle = 0
+
+    end_run = time.perf_counter()
+    print("Passed per run: " + str(end_run-start_run))
+
+def capture():
+  """
+  Capturing images and put them into the
+  queue
+  """
+  config = Config()
+  throddle = 0
+
+  # create capturer (this seems to have to be inside
+  # the local thread or else mss doesn't work)
+  capture_selection = CaptureSelection(config)
+  capture_selection.select(config.get_capturer())
+
+  # TODO: Finish this!
+  capturer = capture_selection.get()
+  while(True):
+    start_run = time.perf_counter()
+    time.sleep(throddle) # we might slightly throttle this if we are too fast at capturing
+
+    image = capturer.grab_image()
+    images_queue.put(image, block=False)
+
+    # Timing the consumation and then adjust our throdding time
+    if(images_queue.full()):
+      start = time.perf_counter()
+      while(images_queue.full()):
+        pass
+      end = time.perf_counter()
+      passed = end-start
+
+      # increase by 10 % of the overshoot
+      throddle = throddle + (passed-throddle)*0.1 # is throddle always smaller?
+    else:
+      # slightly reduce time by 0.1%
+      throddle= throddle - throddle*0.001
+      if (throddle < 0):
+        throddle = 0
+
+    end_run = time.perf_counter()
+    print("Passed per run: " + str(end_run-start_run))
+
+def prepare(shift_score):
+  """
+  Prepare the captured images inside the queue.
+  Put result into queue.
+  """
+
+  saver = ImageSaver("screenshots/debug/", "retrieved")
+  while(True):
+    image = images_queue.get()
+    images_queue.task_done()
+    saver.save(image)
+    view = GameboyViewProcessor(image, shift_score=shift_score)
+    gameboyview_queue.put(view)
 
 class Game:
   MIN_WAIT_TIME = 50
@@ -58,8 +145,10 @@ class Game:
       return False
 
   def get_gameboy_view_processor(self):
-    image = self.capturer.grab_image()
-    return GameboyViewProcessor(image, shift_score=self.shift_score)
+    # The taking of images is currently faster
+    # than the consuming of them. This fills up our queue...
+    # TODO: Fix this!
+    return gameboyview_queue.get()
 
   def state_machine(self):
     while not self.force_stop():
@@ -69,12 +158,44 @@ class Game:
         self.idle()
 
   def run(self):
+    """
+    This starts three threads:
+    1) Capture: Continuously capture images through the
+    provided capturer and puts the into the queue
+    2) Prepare: Fetches the grabbed image from the
+    queue and prepares by using tile recognition.
+    Drops unreliable images.
+    Puts the array with the recognized tiles into
+    another queue
+    3) Analyse: Fetches results from queue and analysis the
+    results
+    """
     saver = ImageSaver("screenshots/debug/", "running")
     self.round = Round(self, saver, self.plotter, self.writer)
     self.round.start(self.processor)
     self.processor = self.get_gameboy_view_processor()
 
+  def _empty_queues(self):
+    # Before each new game we clear the global queues
+    with images_queue.mutex:
+      images_queue.queue.clear()
+
+    with gameboyview_queue.mutex:
+      gameboyview_queue.clear()
+
+  def _start_capture_thread(self):
+    # Start capturing thread
+    t = threading.Thread(target=capture, daemon=True, name="capture")
+    t.start()
+
+  def _start_prepare_thread(self, shift_score):
+    t = threading.Thread(target=prepare, args=(shift_score,), daemon=True, name="prepare")
+    t.start()
+
   def start(self):
+    self._start_capture_thread()
+    self._start_prepare_thread(self.shift_score)
+
     self.processor = self.get_gameboy_view_processor()
     self.state_machine()
 
@@ -245,7 +366,9 @@ class Round:
     """
     # This currently needs almost three seconds...
     self.processor = self.game.get_gameboy_view_processor()
+    #self.saver.save(self.processor.original_image)
     self.playfield = self.get_playfield()
+
 
   def retake(self):
     """
@@ -257,7 +380,7 @@ class Round:
 
   def is_blending(self):
     """
-    There is blending in the  playfield
+    There is blending in the playfield
     which is too difficult to handle...
     """
     return self.playfield == None
@@ -277,7 +400,7 @@ class Round:
           and not self.is_over()):  # Something like not processor.get_top_left_tile().is_black()
       # This uses up time. We could make it faster
       # by not saving every image but it only needs like 14 miliseconds
-      self.saver.save(self.processor.original_image)
+      #self.saver.save(self.processor.original_image)
 
       print("")
       score = self.score(self.processor)

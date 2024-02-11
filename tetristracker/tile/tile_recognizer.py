@@ -31,6 +31,12 @@ class TileRecognizer:
 
     # Skip white tiles
     if (not tile.is_white()):
+      # If we detect a one-colored non-white, non-black tile then
+      # it's the line clear animation. We return such tiles
+      # as grey.We should probably move this into the tile recognizer
+      if (not tile.is_black() and (tile.is_one_color() or tile.is_dull())):
+        return TileRecognizer.GREY
+
       template_matching_values = self.matching(tile.tile_image)
       best_match = np.argmax(template_matching_values)
 
