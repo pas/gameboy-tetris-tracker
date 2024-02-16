@@ -1,0 +1,15 @@
+title Queuing
+
+Main->ThreadStart: start
+ThreadStart->QueueStart: pull & wait
+Main->Thread1: start
+Thread1->Queue1: pull & wait
+Main->Thread2: start
+Thread2->Queue2: pull & wait
+Main->EndQueue:pull & wait
+QueueStart->ThreadStart: send
+ThreadStart->Queue1: is free?
+Queue1->ThreadStart: yes
+ThreadStart->Queue1: set
+Queue1->Thread1:send
+Thread1->EndQueue:set

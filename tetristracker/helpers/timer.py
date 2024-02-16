@@ -1,11 +1,11 @@
 import time
 
 class Timer:
-  def __init__(self, delay=50):
+  def __init__(self, delay=1000/32): # 30 images per second
     """
     Put in the delay in miliseconds
     """
-    self.delay = 50
+    self.delay = delay
 
   def start(self):
     """
@@ -28,6 +28,6 @@ class Timer:
     approximation.
     """
     time_passed = self.time_passed()
-    if (time_passed < 50):
+    if (time_passed < self.delay):
       time.sleep((self.delay - time_passed) / 1000)
     self.start()

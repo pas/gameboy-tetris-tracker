@@ -50,12 +50,16 @@ class PlayfieldProcessor():
       for row_nr, tile_image in enumerate(column):
         tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
 
-        if (save_tiles):
-          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-screenshot-tile.png', tile.tile_image)
+        tile_in_transition = tile.is_in_transition()
 
-        in_transition = tile.is_in_transition()
-        if(in_transition and return_on_transition):
+        if (save_tiles):
+          cv2.imwrite('screenshots/tiles/' + str(column_nr) + "-" + str(row_nr) + '-'+str(tile_in_transition)+'-tile.png', tile.tile_image)
+
+        if(tile_in_transition and return_on_transition):
           return None
+
+        # TODO: Too many transions get recognized. This is probably because I changed to grey images only.
+        in_transition = tile_in_transition or in_transition
 
         result.append(self.recognizer.recognize(tile_image))
 

@@ -9,7 +9,8 @@ from tetristracker.tile.tile_recognizer import TileRecognizer
 class TestTileRecognizer(unittest.TestCase):
   def test_l_mino(self):
     recognizer = TileRecognizer()
-    tile = np.array(Image.open("test/tiles/L-mino-1.png").convert('RGB'))
+    tile = np.array(Image.open("test/tiles/L-mino-1.png").convert('L'))
+
     result = recognizer.recognize(tile)
 
     self.assertEqual(result, 3)
@@ -17,7 +18,7 @@ class TestTileRecognizer(unittest.TestCase):
 
   def test_t_mino(self):
     recognizer = TileRecognizer()
-    tile = np.array(Image.open("test/tiles/T-mino-1.png").convert('RGB'))
+    tile = np.array(Image.open("test/tiles/T-mino-1.png").convert('L'))
 
     result = recognizer.recognize(tile)
 

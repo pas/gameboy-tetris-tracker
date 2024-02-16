@@ -29,7 +29,7 @@ class MainWindow(Window):
   mode_menu_default = [ 'highscore::_SCORE_',
                          'piece distribution::_PIECE_DIST_' ]
 
-  def __init__(self, image_creator_window, scores, replay):
+  def __init__(self, image_creator_window, scores, replay, trimmed_image_window):
     # This is needed here because MSS sets this option as well
     # Otherwise the GUI will change as soon mss gets called.
     # See: https://github.com/PySimpleGUI/PySimpleGUI/issues/6392#event-9357175964
@@ -37,11 +37,13 @@ class MainWindow(Window):
     self.image_creator_window = image_creator_window
     self.scores_window = scores
     self.replay_window = replay
+    self.trimmed_image_window = trimmed_image_window
     self.window = None
     self.config = Config()
 
   def layout(self):
     self.menu_def = [['Others', ['Retrieve bounding box::_BBOX_',
+                                 'View trimmed image::_TRIMMED_',
                             'Image creator::_CREATOR_',
                             "Highscores::_SCORES_",
                             "View replay::_REPLAY_",
@@ -82,6 +84,8 @@ class MainWindow(Window):
         self.scores_window.create()
       if(split == "_REPLAY_"):
         self.replay_window.create()
+      if(split == "_TRIMMED_"):
+        self.trimmed_image_window.create()
       if(split == "_CAMERA-SELECTION_"):
         self.create_camera_selection()
       if(split == "_ICEPT_"):

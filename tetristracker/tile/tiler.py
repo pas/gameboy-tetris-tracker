@@ -3,6 +3,19 @@ from PIL import Image
 
 
 class Tiler:
+  """
+  The expects an image showing a gameboy display
+  (e.g. from the interceptor). It creates an
+  array with tiles that all have the same
+  height and width.
+  Be aware: The image size of the input image
+  will in many cases be different from the
+  output image. The images size only stays
+  the same if the height is already a
+  multitude of the nr_tiles_height AND
+  the width is a multitude of the
+  nr_tiles_width
+  """
   def __init__(self, nr_tiles_height, nr_tiles_width, image):
     self.nr_tiles_height = nr_tiles_height
     self.nr_tiles_width = nr_tiles_width
@@ -37,6 +50,7 @@ class Tiler:
     height = shape[0]
     width = shape[1]
 
+    # get pixels that cannot be evenly distributed
     even_height = height % self.nr_tiles_height
     even_width = width % self.nr_tiles_width
 
@@ -51,5 +65,6 @@ class Tiler:
     even_height = self.adapted_image.shape[0] % self.nr_tiles_height
     even_width = self.adapted_image.shape[1] % self.nr_tiles_width
 
+    # This is just a check that we have reached our goal
     assert(even_height == 0)
     assert(even_width == 0)

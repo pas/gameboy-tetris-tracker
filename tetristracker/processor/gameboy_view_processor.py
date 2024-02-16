@@ -10,11 +10,16 @@ class GameboyViewProcessor():
   nr_of_tiles_width = 20
   nr_of_tiles_height = 18
 
-  def __init__(self, image, shift_score=False, save_tiles=False):
+  def __init__(self, image, counter, shift_score=False, save_tiles=False):
     self.original_image = np.array(image)
     self.tiled_image = self._tile_image()
     self.shift_score = shift_score
+    self.number = counter
+    # This is only here to save tiles when necessary
     self._run(save_tiles=save_tiles)
+
+  def get_number(self):
+    return self.number
 
   def _tile_image(self):
     tiler = Tiler(GameboyViewProcessor.nr_of_tiles_height, GameboyViewProcessor.nr_of_tiles_width, self.original_image)

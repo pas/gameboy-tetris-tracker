@@ -15,6 +15,7 @@ class Window(ABC):
 
   def create(self):
     self.window = sg.Window(self.name(), self.layout(), modal=self.modal(), finalize=self.finalize())
+    self._window_create_hook()
     self._event_loop()
     self.window.close()
 
@@ -32,6 +33,9 @@ class Window(ABC):
       leave_event_loop = self._event_loop_hook(event, values)
 
   def _window_close_hook(self):
+    pass
+
+  def _window_create_hook(self):
     pass
 
   @abstractmethod

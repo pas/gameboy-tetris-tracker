@@ -15,9 +15,11 @@ class TileRecognizer:
   I_MINO_SIMPLE = 6
   GREY = 12
   EMPTY = -99
+  mino_array = []
 
   def __init__(self,):
-    self.mino_array = self.create_mino_array()
+    if(len(TileRecognizer.mino_array) == 0):
+      self.create_mino_array()
 
   def recognize(self, tile, simplify_i_mino=False):
     """
@@ -30,11 +32,11 @@ class TileRecognizer:
     tile = Tile(tile)
 
     # Skip white tiles
-    if (not tile.is_white()):
+    if not tile.is_white():
       # If we detect a one-colored non-white, non-black tile then
       # it's the line clear animation. We return such tiles
       # as grey.We should probably move this into the tile recognizer
-      if (not tile.is_black() and (tile.is_one_color() or tile.is_dull())):
+      if not tile.is_black() and (tile.is_one_color() or tile.is_dull()):
         return TileRecognizer.GREY
 
       template_matching_values = self.matching(tile.tile_image)
@@ -63,14 +65,14 @@ class TileRecognizer:
                'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
 
     result = []
-    for mino_template in self.mino_array:
+    for mino_template in TileRecognizer.mino_array:
       match_value = cv2.matchTemplate(tile, mino_template, eval(methods[0]))
       result.append(match_value)
 
     return np.array(result).flatten()
 
   def retrieve_template(self, path):
-    image = Image.open(path).convert('RGB').resize((Tile.STANDARD_WIDTH, Tile.STANDARD_HEIGHT), Image.Resampling.BILINEAR)
+    image = Image.open(path).convert('L').resize((Tile.STANDARD_WIDTH, Tile.STANDARD_HEIGHT), Image.Resampling.BILINEAR)
     return np.array(image)
 
   def create_mino_array(self):
@@ -89,7 +91,7 @@ class TileRecognizer:
     t3r_mino = self.retrieve_template("images/tiles/8F.png")
 
     #This needs to be in the same order as the names
-    return [
+    TileRecognizer.mino_array =  [
             j_mino,                 z_mino,               o_mino,                 l_mino,                   t_mino,
             s_mino,                 t1_mino,              t2_mino,                t3_mino,                  t1r_mino,
             t2r_mino,               t3r_mino,]

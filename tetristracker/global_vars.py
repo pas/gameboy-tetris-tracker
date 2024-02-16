@@ -1,13 +1,16 @@
 from queue import Queue
 
+# TODO: Handle cases when queues gets overfull!
 """
-  Queue where the capturer stores at most 120 images
-  and the ... gets them
+  Queue where the capturer stores 
+  raw images
 """
-# TODO: Handle cases when queue gets overfull!
 images_queue = Queue(maxsize=4)
 """
-Queue where the ... stores the playfield
-and the analysis module gets them.
+  Queue where the playfield image is stored
 """
-gameboyview_queue = Queue(maxsize=4)
+playfield_image_queues = [Queue(maxsize=2), Queue(maxsize=2), Queue(maxsize=2),Queue(maxsize=2)]
+"""
+  Queue where there Playfield object is stored
+"""
+playfield_queue = Queue(maxsize=2*len(playfield_image_queues))

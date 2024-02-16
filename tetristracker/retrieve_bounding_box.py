@@ -4,6 +4,8 @@ from mss import mss
 from PIL import Image
 import numpy as np
 
+from tetristracker.capturer.mss_capturer import MSSCapturer
+from tetristracker.capturer.obs_virtual_cam_capturer import OBSVirtualCamCapturer
 from tetristracker.capturer.simple_camera_capturer import SimpleCameraCapturer
 from tetristracker.image.image_manipulator import trim
 from tetristracker.helpers.config import Config

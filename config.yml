@@ -21,7 +21,7 @@ plotter: piece_distribution
 rom_version: orig
 screen:
   bounding_box:
-    height: 708
-    left: 108
-    top: 412
-    width: 786
+    height: 700
+    left: 112
+    top: 416
+    width: 777
