@@ -14,7 +14,7 @@ class Tiler:
   the same if the height is already a
   multitude of the nr_tiles_height AND
   the width is a multitude of the
-  nr_tiles_width
+  nr_tiles_width. Height and width might differ!
   """
   def __init__(self, nr_tiles_height, nr_tiles_width, image):
     self.nr_tiles_height = nr_tiles_height

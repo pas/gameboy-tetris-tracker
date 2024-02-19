@@ -1,3 +1,4 @@
+import multiprocessing
 import threading
 import time
 from abc import abstractmethod
@@ -26,7 +27,7 @@ from tetristracker.tracker.lines_tracker import LinesTracker
 from tetristracker.tracker.score_tracker import ScoreTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
 from tetristracker.helpers.timer import Timer
-from tetristracker.global_vars import images_queue, playfield_queue, playfield_image_queues
+from tetristracker.global_vars import Queues
 
 
 class Get():
@@ -76,9 +77,6 @@ class ImageCapture(Get):
 
     if(not self.previous is None):
       # We don't want to capture the exact same image twice...
-      #diff_image = self.previous - image
-      #diff = np.sum(diff_image)
-      #cv2.imwrite("diff_image-"+str(diff)+".png", diff_image)
       while(np.sum(self.previous - image) < 900000): # TODO: This number is stupid as it should be percentage of the image...
         image = self.capturer.grab_image()
     self.previous = image
@@ -87,7 +85,7 @@ class ImageCapture(Get):
 
 
 class ImageToGameboyViewProcessor(Get):
-  def __init__(self, shift_score, i_queue):
+  def __init__(self, shift_score, images_queue):
     self.i_queue = images_queue
     self.shift_score = shift_score
     self.saver = ImageSaver("screenshots/debug/", "retrieved")
@@ -95,7 +93,7 @@ class ImageToGameboyViewProcessor(Get):
 
   def get(self):
     image = self.i_queue.get()
-    self.i_queue.task_done()
+    #self.i_queue.task_done()
     self.saver.save(image)
     # until here everything needs to be streamlined
     # if this is not the case anymore then we need to move
@@ -111,7 +109,7 @@ class GameboyViewProcessorToPlayfieldProcessor(Get):
 
   def get(self):
     gameboyview : GameboyViewProcessor = self.queue.get()
-    self.queue.task_done()
+    #self.queue.task_done()
     playfield = None
     if(gameboyview.get_top_left_tile().is_black()):
       processor = PlayfieldProcessor(gameboyview.get_playfield(), image_is_tiled=True)
@@ -119,30 +117,33 @@ class GameboyViewProcessorToPlayfieldProcessor(Get):
     return gameboyview, playfield
 
 
-def capture():
+def capture(images_queue):
   """
   Capturing images and put them into the
   queue
   """
+  print("capture")
   getter = ImageCapture()
   put_queue(images_queue, getter, time_it=False)
 
 
-def prepare_gameboy_view(shift_score):
+def prepare_gameboy_view(shift_score, images_queue, playfield_image_queues):
   """
   Prepare the captured images inside the queue.
   Put result into queue.
   """
+  print("gb view")
   getter = ImageToGameboyViewProcessor(shift_score, images_queue)
   put_queues(playfield_image_queues, getter, time_it=False)
 
 
-def prepare_playfield(queue):
+def prepare_playfield(playfield_image_queues, playfield_queue):
   """
   Prepare the playfield.
   Put results into queue
   """
-  getter = GameboyViewProcessorToPlayfieldProcessor(queue)
+  print("playfield")
+  getter = GameboyViewProcessorToPlayfieldProcessor(playfield_image_queues)
   put_queue(playfield_queue, getter, time_it=False)
 
 
@@ -151,7 +152,7 @@ class Game:
   def __init__(self, capturer, plotter, writer, shift_score=False):
     self.round = None
     self.capturer = capturer
-    self.timer = Timer()
+    #self.timer = Timer()
     self.plotter = plotter
     self.writer = writer
     self.shift_score = shift_score  # I really don't like this here :(
@@ -187,8 +188,8 @@ class Game:
   def get_gameboy_view_processor(self): # TODO: Change name
     # the playfield_queue does not always return the results in order
     # as we are using threads
-    (view, playfield) = playfield_queue.get() # The queue might return None for playfield
-    playfield_queue.task_done()
+    (view, playfield) = Queues.playfield_queue.get() # The queue might return None for playfield
+    #Queues.playfield_queue.task_done()
     if(self.counter is None):
       self.counter = view.get_number()
     elif(view.get_number() > self.counter+1): # it is not the next image
@@ -242,28 +243,31 @@ class Game:
 
   def _empty_queues(self):
     # Before each new game we clear the global queues
-    with images_queue.mutex:
-      images_queue.queue.clear()
+    with Queues.images_queue.mutex:
+      Queues.images_queue.queue.clear()
 
-    with playfield_queue.mutex:
-      playfield_queue.queue.clear()
+    with Queues.playfield_queue.mutex:
+      Queues.playfield_queue.queue.clear()
 
-    for i in range(0, len(playfield_image_queues)):
-      with playfield_image_queues[i].mutex:
-        playfield_image_queues.clear()
+    for i in range(0, len(Queues.playfield_image_queues)):
+      with Queues.playfield_image_queues[i].mutex:
+        Queues.playfield_image_queues.clear()
 
   def _start_capture_thread(self):
     # Start capturing thread
-    t = threading.Thread(target=capture, daemon=True, name="capture")
+    #t = threading.Thread(target=capture, daemon=True, name="capture")
+    t = multiprocessing.Process(target=capture, args=(Queues.images_queue, ), daemon=True, name="capture")
     t.start()
 
   def _start_prepare_thread(self, shift_score):
-    t = threading.Thread(target=prepare_gameboy_view, args=(shift_score,), daemon=True, name="prepare_gameboyview")
+    t = multiprocessing.Process(target=prepare_gameboy_view, args=(shift_score, Queues.images_queue, Queues.playfield_image_queues), daemon=True, name="prepare_gameboyview")
+    #t = threading.Thread(target=prepare_gameboy_view, args=(shift_score,), daemon=True, name="prepare_gameboyview")
     t.start()
 
   def _start_playfield_preparation_threads(self):
-    for i in range(0, len(playfield_image_queues)):
-      t = threading.Thread(target=prepare_playfield, daemon=True, args=(playfield_image_queues[i],), name="prepare_playfield-"+str(i))
+    for i in range(0, len(Queues.playfield_image_queues)):
+      t = multiprocessing.Process(target=prepare_playfield, daemon=True, args=(Queues.playfield_image_queues[i], Queues.playfield_queue,), name="prepare_playfield-" + str(i))
+      #t = threading.Thread(target=prepare_playfield, daemon=True, args=(playfield_image_queues[i],), name="prepare_playfield-"+str(i))
       t.start()
 
   def start(self):
@@ -281,10 +285,10 @@ class Game:
     the case change state
     :return:
     """
-    self.timer.start()
+    #self.timer.start()
     while not self.is_running(self.gameboy_view_processor) and not self.force_stop():
       self.gameboy_view_processor, self.playfield_processor = self.get_gameboy_view_processor()
-      self.timer.wait_then_restart()
+      #self.timer.wait_then_restart()
 
 
 class Round:
@@ -305,7 +309,7 @@ class Round:
     self.saver = saver
     self.plotter = plotter
     self.game = game
-    self.timer = Timer()
+    #self.timer = Timer()
 
     # set in start()
     self.playfield = None
@@ -390,9 +394,9 @@ class Round:
 
   def idle(self):
     print("Game is idle")
-    self.timer.start()
+    #self.timer.start()
     while (self.is_paused() or self.is_over()) and not self.game.force_stop():
-      self.timer.wait_then_restart()
+      #self.timer.wait_then_restart()
       self.prepare()
 
   def state_machine(self):
@@ -451,7 +455,7 @@ class Round:
     on pause or does not have a blending playfield
     and the game is running.
     """
-    self.timer.start()
+    #self.timer.start()
 
     while (self.game.is_running(self.processor)
            and not self.game.force_stop()
@@ -501,6 +505,6 @@ class Round:
                           self.preview_tracker.last(), self.preview_tracker.spawned_piece,
                           self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
 
-      self.timer.wait_then_restart()
+      #self.timer.wait_then_restart()
 
       self.prepare()

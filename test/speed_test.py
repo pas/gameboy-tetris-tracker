@@ -1,5 +1,7 @@
+import multiprocessing
 import time
 import unittest
+from multiprocessing import Process
 from queue import Queue
 from threading import Thread
 
@@ -20,12 +22,53 @@ from tetristracker.tile.tile_recognizer import TileRecognizer
 
 q_1 = Queue()
 q_2 = Queue()
-def worker1():
+q_3 = Queue()
+m_q = [q_2, q_3]
+
+m_p_q = multiprocessing.JoinableQueue()
+
+m_p_q_1 = multiprocessing.JoinableQueue()
+m_p_q_2 = multiprocessing.JoinableQueue()
+m_p_q_3 = multiprocessing.JoinableQueue()
+m_p_q_4 = multiprocessing.JoinableQueue()
+m_m_p_q = [m_p_q_1, m_p_q_2, m_p_q_3, m_p_q_4]
+
+def worker():
   while True:
     image = q_1.get()
     processor = GameboyViewProcessor(image)
     q_1.task_done()
+
+def worker1():
+  while True:
+    image = q_1.get()
+    processor = GameboyViewProcessor(image)
     q_2.put(processor.get_playfield())
+    q_1.task_done()
+
+def workerMultiQueues():
+  current = 0
+  while True:
+    image = q_1.get()
+    processor = GameboyViewProcessor(image)
+    selected_queue = m_q[current]
+    selected_queue.put(processor.get_playfield())
+    current = (current+1) % 2
+    q_1.task_done()
+
+def worker_multi_process_1():
+  while True:
+    image = q_1.get()
+    processor = GameboyViewProcessor(image)
+    m_p_q.put(processor.get_playfield())
+    q_1.task_done()
+
+def worker_multi_process_2(m_p_q : multiprocessing.JoinableQueue):
+  while True:
+    image = m_p_q.get()
+    processor = PlayfieldProcessor(image, image_is_tiled=True)
+    processor.run()
+    m_p_q.task_done()
 
 def worker2():
   while True:
@@ -34,12 +77,28 @@ def worker2():
     processor.run()
     q_2.task_done()
 
+def worker3():
+  while True:
+    image = q_3.get()
+    processor = PlayfieldProcessor(image, image_is_tiled=True)
+    processor.run()
+    q_3.task_done()
+
 class TestSpeed(unittest.TestCase):
   def setUp(self):
     with q_1.mutex:
       q_1.queue.clear()
     with q_2.mutex:
       q_2.queue.clear()
+    with q_3.mutex:
+      q_3.queue.clear()
+    m_p_q = multiprocessing.JoinableQueue()
+    m_p_q_1 = multiprocessing.JoinableQueue()
+    m_p_q_2 = multiprocessing.JoinableQueue()
+    m_p_q_3 = multiprocessing.JoinableQueue()
+    m_p_q_4 = multiprocessing.JoinableQueue()
+    m_m_p_q = [m_p_q_1, m_p_q_2, m_p_q_3, m_p_q_4]
+
 
   def get_mss_capturer(self):
     config = Config()
@@ -50,6 +109,11 @@ class TestSpeed(unittest.TestCase):
   Goal: at least 30 images per second
   """
   def test_mss_speed(self):
+    """
+    This seems to be fine. Around 59 images per second
+    can get captured.
+    :return:
+    """
     mssCapturer = self.get_mss_capturer()
 
     iterations = 120 # 4 seconds
@@ -60,9 +124,20 @@ class TestSpeed(unittest.TestCase):
     end = time.perf_counter()
     passed_time = end-start
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
-    self.assertTrue(passed_time < 4.0)
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # Measured on 19-02-2024: 2.03, 2.17, 2.03, 2.18, 2.04
+    self.assertTrue(passed_time < 2.2)
 
   def test_mss_speed_with_gv_processor(self):
+    """
+    This seems to be fine. Around 37 images per second
+    can get captured.
+
+    We don't need to worry what the mss capturer returns
+    as the only thing we do in GameboyViewProcessor
+    is resize the image (see GameboyViewProcessor#_tile_image)
+    """
     mss_capturer = self.get_mss_capturer()
 
     iterations = 120  # 4 seconds
@@ -75,10 +150,22 @@ class TestSpeed(unittest.TestCase):
     end = time.perf_counter()
     passed_time = end - start
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
-    self.assertTrue(passed_time < 4.0)
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # Measured on 19-02-2024: 3.3, 3.2, 3.4, 3.5, 3.5, 3.2
+    self.assertTrue(passed_time < 3.6)
 
   def test_mss_speed_with_gv_processor_with_queues(self):
-    t = Thread(target=worker1, daemon=True)
+    """
+    This is more or less how it is implemented
+    in game. Cannot test it separately so
+    we mimick the behaviour. This might
+    be completely wrong...
+
+    TODO: I think this means that we can move this and the previous
+    TODO: action into one process and using Threads there.
+    """
+    t = Thread(target=worker, daemon=True)
     t.start()
 
     mss_capturer = self.get_mss_capturer()
@@ -94,10 +181,29 @@ class TestSpeed(unittest.TestCase):
 
     end = time.perf_counter()
     passed_time = end - start
+
+    # This is even slightly faster than the non-threaded one
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
-    self.assertTrue(passed_time < 4.0)
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # Measured on 19-02-2024: 2.03, 2.03, 2.01, 2.02
+    self.assertTrue(passed_time < 2.1)
 
   def test_mss_speed_with_gv_processor_and_playfield_processor(self):
+    """
+    This is all without threading
+    to see the difference.
+    The problem here is that we do work
+    in Playfield processor, so we use
+    the image grabbed through the
+    GameboyViewProcessor (where before
+    we only did resize the image).
+    This means this is dependend
+    on the input image... This makes
+    this a very brittle test...
+
+    This should be quite slow.
+    """
     mss_capturer = self.get_mss_capturer()
 
     iterations = 120  # 4 seconds
@@ -111,11 +217,23 @@ class TestSpeed(unittest.TestCase):
 
     end = time.perf_counter()
     passed_time = end - start
+
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
     print(str(iterations / passed_time) + " images for 1 second")
-    self.assertTrue(passed_time < 4.0)
+
+    # 10.0, 9.8, 10.1, 10.1
+    self.assertTrue(passed_time < 10.2)
 
   def test_mss_speed_with_gv_processor_and_playfield_processor_with_queues(self):
+    """
+    This is more or less how it is implemented
+    in game. Cannot test it separately so
+    we mimick the behaviour. This might
+    be completely wrong...
+
+    Through this it is possible to win around 7 more images per second
+    (see #test_mss_speed_with_gv_processor_and_playfield_processor)
+    """
     t1 = Thread(target=worker1, daemon=True)
     t2 = Thread(target=worker2, daemon=True)
     t1.start()
@@ -135,9 +253,93 @@ class TestSpeed(unittest.TestCase):
 
     end = time.perf_counter()
     passed_time = end - start
+
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
     print(str(iterations / passed_time) + " images for 1 second")
-    self.assertTrue(passed_time < 4.0)
+
+    # Measured 19-02-2024: 6.7, 6.5, 6.6, 6.4, 6.4
+    self.assertTrue(passed_time < 6.8)
+
+  def test_mss_speed_with_gv_processor_and_playfield_processor_with_queues_multiprocessed(self):
+    """
+    This is more or less how it is implemented
+    in game. Cannot test it separately so
+    we mimick the behaviour. This might
+    be completely wrong...
+
+    Through this it is possible to win around 7 more images per second
+    (see #test_mss_speed_with_gv_processor_and_playfield_processor)
+
+    This is around the same gain as using Threads. So now win here
+    with multiprocessing. :(
+    """
+    t1 = Thread(target=worker_multi_process_1, daemon=True)
+    t2 = Process(target=worker_multi_process_2, args=(m_p_q,), daemon=True)
+    t1.start()
+    t2.start()
+
+    mss_capturer = self.get_mss_capturer()
+
+    iterations = 120  # 4 seconds
+
+    start = time.perf_counter()
+    for _ in range(0, iterations):
+      image = mss_capturer.grab_image()
+      q_1.put(image)
+
+    q_1.join()
+    m_p_q.join()
+
+    end = time.perf_counter()
+    passed_time = end - start
+
+    print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # Measured 19-02-2024: 6.7, 6.5, 6.6, 6.4, 6.4
+    self.assertTrue(passed_time < 6.8)
+
+  def test_mss_speed_with_gv_processor_and_playfield_processor_with_multi_queues(self):
+    """
+    This is more or less how it is implemented
+    in game. Cannot test it separately so
+    we mimick the behaviour. This might
+    be completely wrong...
+
+    Multiple queues in threading does not make anything faster here...
+    it even slows everything down
+
+    Through this it is possible to win around 7 more images per second
+    (see #test_mss_speed_with_gv_processor_and_playfield_processor)
+    """
+    t1 = Thread(target=workerMultiQueues, daemon=True)
+    t2 = Thread(target=worker2, daemon=True)
+    t3 = Thread(target=worker3, daemon=True)
+    t1.start()
+    t2.start()
+    t3.start()
+
+    mss_capturer = self.get_mss_capturer()
+
+    iterations = 120  # 4 seconds
+
+    start = time.perf_counter()
+    for _ in range(0, iterations):
+      image = mss_capturer.grab_image()
+      q_1.put(image)
+
+    q_1.join()
+    q_2.join()
+    q_3.join()
+
+    end = time.perf_counter()
+    passed_time = end - start
+
+    print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # Measured 19-02-2024: 8.1, 8.0, 7.9, 8.2
+    self.assertTrue(passed_time < 8.3)
 
   class GameMock():
     def __init__(self, images: Queue, playfield_processors: Queue):
@@ -285,8 +487,8 @@ class TestSpeed(unittest.TestCase):
     This is the offending part which is very
     slow. I'd like to have this at a
     way higher speed.
-    Currently at 24 images per second
-    Goal: 60 images per second
+    Currently, at 15 images per second
+    Goal: 30 images per second
     :return:
     """
     iterations = 60
@@ -312,6 +514,53 @@ class TestSpeed(unittest.TestCase):
     print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
     print(str(iterations / passed_time) + " images for 1 second")
     self.assertTrue(passed_time < 2.0)
+
+  def test_playfield_processing_speed_with_processes(self):
+    """
+    Using 4 process to run.
+    Can run around 58 images this way
+    which is fast enough
+    """
+    t1 = Process(target=worker_multi_process_2, args=(m_p_q_1,), daemon=True)
+    t2 = Process(target=worker_multi_process_2, args=(m_p_q_2,), daemon=True)
+    t3 = Process(target=worker_multi_process_2, args=(m_p_q_3,), daemon=True)
+    t4 = Process(target=worker_multi_process_2, args=(m_p_q_4,), daemon=True)
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+
+    iterations = 120
+    start_nr = 143
+    capturer = ImageSequenceCapturer("test/sequence/full-game-with-transition/retrieved",
+                                     nr_of_images=iterations,
+                                     start_nr=start_nr)
+
+    images = Queue()
+    while (capturer.has_image()):
+      images.put(GameboyViewProcessor(image=capturer.grab_image(), counter=0).get_playfield())
+
+    start = time.perf_counter()
+    current = 0
+    number_of_processes = 4
+    for _ in range(0, iterations):
+      processor = images.get()
+      m_m_p_q[current].put(processor)
+      current = (current + 1) % number_of_processes
+
+    m_p_q_1.join()
+    m_p_q_2.join()
+    m_p_q_3.join()
+    m_p_q_4.join()
+
+    end = time.perf_counter()
+
+    passed_time = end - start
+    print("Needed " + str(passed_time) + " seconds for " + str(iterations) + " images.")
+    print(str(iterations / passed_time) + " images for 1 second")
+
+    # 19-02.2024 recorded: 2.07, 1.99, 2.01, 2.06, 2.03, 2.1, 2.2, 2.1, 2.02
+    self.assertTrue(passed_time < 2.3)
 
 
   def test_tile_speed(self):

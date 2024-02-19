@@ -1,7 +1,7 @@
 import time
 
 class Timer:
-  def __init__(self, delay=1000/32): # 30 images per second
+  def __init__(self, delay=1000/62): # 60 images per second
     """
     Put in the delay in miliseconds
     """
