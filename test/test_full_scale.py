@@ -5,7 +5,7 @@ import cv2
 
 from test.helpers import create_gameboy_view_processor_with
 from tetristracker.capturer.video_file_capturer import VideoFileCapturer
-from tetristracker.commasv.writer import Writer
+from tetristracker.storage.writer import Writer
 from tetristracker.game import Game
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor

@@ -2,7 +2,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 from tetristracker.helpers import calculations
-from tetristracker.commasv.csv_reader import CSVReader
+from tetristracker.storage.csv_reader import CSVReader
 
 
 class ProgressPlotter:

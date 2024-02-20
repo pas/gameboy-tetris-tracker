@@ -1,6 +1,6 @@
 import unittest
 
-from tetristracker.commasv.csv_reader import CSVReader
+from tetristracker.storage.csv_reader import CSVReader
 
 
 class TestCSV(unittest.TestCase):

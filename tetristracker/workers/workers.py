@@ -1,5 +1,3 @@
-import time
-
 from tetristracker.workers.gameboy_view_processor_to_playfield_processor import GameboyViewProcessorToPlayfieldProcessor
 from tetristracker.workers.get import Get
 from tetristracker.workers.image_capture import ImageCapture

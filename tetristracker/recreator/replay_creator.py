@@ -1,6 +1,6 @@
 import numpy as np
 
-from tetristracker.commasv.sqlite_reader import SqliteReader
+from tetristracker.storage.sqlite_reader import SqliteReader
 from tetristracker.helpers.calculations import number_to_hex_string, tile_number_to_image_number
 from tetristracker.tile.tetromino_transmission import MinoToTetrominoConverter, TetrominoTransmission
 

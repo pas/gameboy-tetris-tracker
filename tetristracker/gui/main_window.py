@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 
 from tetristracker import retrieve_bounding_box
 from tetristracker.capturer.capture_selection import CaptureSelection
-from tetristracker.commasv.sqlite_writer import SqliteWriter
+from tetristracker.storage.sqlite_writer import SqliteWriter
 from tetristracker.gui.camera_selection_popup import SelectCameraPopupWindow
 from tetristracker.gui.stoppable_thread import StoppableThread
 from tetristracker.gui.window import Window

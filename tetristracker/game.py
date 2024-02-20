@@ -1,22 +1,16 @@
 import multiprocessing
 import threading
 import time
-from abc import abstractmethod
-from queue import Queue
 
 import cv2
 import numpy as np
 from PIL import ImageOps
 from PIL import Image
 
-from tetristracker.capturer.capture_selection import CaptureSelection
-from tetristracker.commasv.writer import Writer
-from tetristracker.helpers.config import Config
+from tetristracker.storage.writer import Writer
 from tetristracker.image.gameboy_image import GameboyImage
-from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.image.image_saver import ImageSaver
-from tetristracker.processor.number_processor import SequentialNumberProcessor, SimplisticSequentialNumberProcessor
-from tetristracker.processor.playfield_processor import PlayfieldProcessor
+from tetristracker.processor.number_processor import SimplisticSequentialNumberProcessor
 from tetristracker.stats.stats import Stats
 from tetristracker.tile.tile import Tile
 from tetristracker.unit.playfield import Playfield
@@ -26,8 +20,7 @@ from tetristracker.tracker.level_tracker import LevelTracker
 from tetristracker.tracker.lines_tracker import LinesTracker
 from tetristracker.tracker.score_tracker import ScoreTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
-from tetristracker.helpers.timer import Timer
-from tetristracker.global_vars import Queues
+from tetristracker.workers.queues import Queues
 from tetristracker.workers.workers import prepare_gameboy_view, capture, prepare_playfield
 
 
@@ -402,12 +395,11 @@ class Round:
       print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
       if (not np.isnan(np.array(clean_playfield, dtype=float)).any()):
         print("Paritiy: " + str(Playfield(clean_playfield).parity()))
-        pass
 
-      # This is slow...
+      # TODO: This is slow... should be in a separate process/thread
       #self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
 
-      # This is slow...
+      # TODO: This is slow... should be in a separate process/thread
       #self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
                           #self.preview_tracker.last(), self.preview_tracker.spawned_piece,
                           #self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)

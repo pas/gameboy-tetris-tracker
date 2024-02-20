@@ -2,7 +2,7 @@ import datetime
 import sqlite3
 import json
 
-from tetristracker.commasv.writer import Writer
+from tetristracker.storage.writer import Writer
 
 
 class SqliteWriter(Writer):

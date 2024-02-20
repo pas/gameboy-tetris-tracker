@@ -9,7 +9,7 @@ from threading import Thread
 from test.helpers import get_image
 from tetristracker.capturer.image_sequence_capturer import ImageSequenceCapturer
 from tetristracker.capturer.mss_capturer import MSSCapturer
-from tetristracker.commasv.writer import Writer
+from tetristracker.storage.writer import Writer
 from tetristracker.game import Game, Round
 from tetristracker.helpers.config import Config
 from tetristracker.image.gameboy_image import GameboyImage

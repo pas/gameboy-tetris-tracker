@@ -2,7 +2,7 @@ import json
 
 import PySimpleGUI as sg
 
-from tetristracker.commasv.sqlite_reader import SqliteReader
+from tetristracker.storage.sqlite_reader import SqliteReader
 from tetristracker.gui.button_call import ButtonCall
 from tetristracker.gui.image_creator_window import Position
 from tetristracker.gui.window import Window

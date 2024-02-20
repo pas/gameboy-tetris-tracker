@@ -1,5 +1,5 @@
-from tetristracker.commasv.sqlite_reader import SqliteReader
-from tetristracker.commasv.sqlite_writer import SqliteWriter
+from tetristracker.storage.sqlite_reader import SqliteReader
+from tetristracker.storage.sqlite_writer import SqliteWriter
 from tetristracker.gui.window import Window
 
 import PySimpleGUI as sg
