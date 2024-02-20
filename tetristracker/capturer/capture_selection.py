@@ -28,7 +28,7 @@ class CaptureSelection:
   def select_screen(self):
     self.name = "screenshot"
     bounding_box = self.config.get_screen_bounding_box()
-    self.capturer = MSSCapturer(bounding_box)
+    self.capturer = MSSCapturer(bounding_box, images_per_second=30)
 
   def select_obs_virtual_cam(self):
     self.name = "obs"

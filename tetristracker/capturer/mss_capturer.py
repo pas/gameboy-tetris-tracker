@@ -1,50 +1,27 @@
 import numpy as np
 from PIL import Image
 from mss import mss
-from threading import Lock
+
+from tetristracker.capturer.capturer import Capturer
+from tetristracker.helpers.none_timer import NoneTimer
+from tetristracker.helpers.timer import Timer
 
 
-class MSSCapturer:
-  """
-  This capturer expects a blak border that gets removed
-  by the capturer itself.
-  """
-  def __init__(self, bounding_box):
+class MSSCapturer(Capturer):
+  def __init__(self, bounding_box, images_per_second=None):
     self.sct = mss()
     self.bounding_box = bounding_box
 
-  def recalculate_border(self):
-    pass
+    if(not images_per_second is None):
+      self.images_per_second = images_per_second
+      self.timer = Timer(delay=1000/self.images_per_second-1.5) # it is no exactly precise so we wait a little less time then we should
+    else:
+      self.images_per_second = None
+      self.timer = NoneTimer()
+    self.timer.start()
 
   def grab_image(self):
+    self.timer.wait_then_restart()
     screenshot = self.sct.grab(self.bounding_box)
+    # TODO: Maybe better to just remove a grey image as GB Tetris is always in greyscale
     return np.array(Image.fromarray(np.array(screenshot)).convert('RGB'))
-
-  def remove_border(self, image):
-    return self.trim(image)
-
-  def trim(self, image):
-    result, self.top, self.bottom, self.left, self.right = self._trim(image, 0, 0, 0, 0)
-    return result
-
-  def _trim(self, frame, top, bottom, left, right):
-    if frame.shape[0] == 0:
-      return np.zeros((0, 0, 3))
-
-    print(np.sum(frame[0]))
-    print(frame[0])
-
-    # crop top
-    if not np.sum(frame[0]):
-      return self._trim(frame[1:], top+1, bottom, left, right)
-    # crop bottom
-    elif not np.sum(frame[-1]):
-      return self._trim(frame[:-1], top, bottom+1, left, right)
-    # crop left
-    elif not np.sum(frame[:, 0]):
-      return self._trim(frame[:, 1:], top, bottom, left+1, right)
-      # crop right
-    elif not np.sum(frame[:, -1]):
-      return self._trim(frame[:, :-1], top+1, bottom, left, right+1)
-
-    return frame, top, bottom, left, right

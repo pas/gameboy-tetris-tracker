@@ -20,7 +20,7 @@ from tetristracker.processor.playfield_processor import PlayfieldProcessor
 from tetristracker.stats.stats import Stats
 from tetristracker.tile.tile import Tile
 from tetristracker.unit.playfield import Playfield
-from tetristracker.processor.preview_processor import SpawningProcessor, PreviewProcessor
+from tetristracker.processor.preview_processor import PreviewProcessor
 from tetristracker.tracker.preview_tracker import PreviewTracker
 from tetristracker.tracker.level_tracker import LevelTracker
 from tetristracker.tracker.lines_tracker import LinesTracker
@@ -28,123 +28,7 @@ from tetristracker.tracker.score_tracker import ScoreTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
 from tetristracker.helpers.timer import Timer
 from tetristracker.global_vars import Queues
-
-
-class Get():
-  @abstractmethod
-  def get(self):
-    pass
-
-
-def put_queue(queue: Queue, callable: Get, time_it=False):
-  while (True):
-    if time_it: start_run = time.perf_counter()
-
-    queue.put(callable.get())
-
-    if time_it: end_run = time.perf_counter()
-    if time_it: print("Passed per run: " + str(end_run - start_run))
-
-def put_queues(queues, callable: Get, time_it=False):
-  select = 0
-  while (True):
-    if time_it: start_run = time.perf_counter()
-
-    queues[select].put(callable.get())
-
-    if time_it: end_run = time.perf_counter()
-    if time_it: print("Passed per run: " + str(end_run - start_run))
-
-    select = (select + 1) % 4
-
-
-class ImageCapture(Get):
-  def __init__(self):
-    config = Config()
-    self.previous = None
-
-    # create capturer (this seems to have to be inside
-    # the local thread or else mss doesn't work)
-    capture_selection = CaptureSelection(config)
-    capture_selection.select(config.get_capturer())
-
-    capturer = capture_selection.get()
-
-    self.capturer = capturer
-
-  def get(self):
-    image = self.capturer.grab_image()
-
-    if(not self.previous is None):
-      # We don't want to capture the exact same image twice...
-      while(np.sum(self.previous - image) < 900000): # TODO: This number is stupid as it should be percentage of the image...
-        image = self.capturer.grab_image()
-    self.previous = image
-
-    return image
-
-
-class ImageToGameboyViewProcessor(Get):
-  def __init__(self, shift_score, images_queue):
-    self.i_queue = images_queue
-    self.shift_score = shift_score
-    self.saver = ImageSaver("screenshots/debug/", "retrieved")
-    self.counter = 0
-
-  def get(self):
-    image = self.i_queue.get()
-    #self.i_queue.task_done()
-    self.saver.save(image)
-    # until here everything needs to be streamlined
-    # if this is not the case anymore then we need to move
-    # the counter out of this class
-    view = GameboyViewProcessor(image, self.counter, shift_score=self.shift_score)
-    self.counter += 1
-    return view
-
-class GameboyViewProcessorToPlayfieldProcessor(Get):
-  # this class is used in multiple threads!
-  def __init__(self, queue):
-    self.queue = queue
-
-  def get(self):
-    gameboyview : GameboyViewProcessor = self.queue.get()
-    #self.queue.task_done()
-    playfield = None
-    if(gameboyview.get_top_left_tile().is_black()):
-      processor = PlayfieldProcessor(gameboyview.get_playfield(), image_is_tiled=True)
-      playfield = processor.run()
-    return gameboyview, playfield
-
-
-def capture(images_queue):
-  """
-  Capturing images and put them into the
-  queue
-  """
-  print("capture")
-  getter = ImageCapture()
-  put_queue(images_queue, getter, time_it=False)
-
-
-def prepare_gameboy_view(shift_score, images_queue, playfield_image_queues):
-  """
-  Prepare the captured images inside the queue.
-  Put result into queue.
-  """
-  print("gb view")
-  getter = ImageToGameboyViewProcessor(shift_score, images_queue)
-  put_queues(playfield_image_queues, getter, time_it=False)
-
-
-def prepare_playfield(playfield_image_queues, playfield_queue):
-  """
-  Prepare the playfield.
-  Put results into queue
-  """
-  print("playfield")
-  getter = GameboyViewProcessorToPlayfieldProcessor(playfield_image_queues)
-  put_queue(playfield_queue, getter, time_it=False)
+from tetristracker.workers.workers import prepare_gameboy_view, capture, prepare_playfield
 
 
 class Game:
@@ -186,35 +70,47 @@ class Game:
       return False
 
   def get_gameboy_view_processor(self): # TODO: Change name
+    if len(self.backset) > 0 and self.counter + 1 in self.backset:  # check if value already exists
+      (view, playfield) = self.backset[self.counter + 1]
+      del self.backset[self.counter + 1]
+      self.counter += 1
+      self.calc_runtime()
+      return (view, playfield)
+
     # the playfield_queue does not always return the results in order
-    # as we are using threads
+    # as we are using threads/processes
     (view, playfield) = Queues.playfield_queue.get() # The queue might return None for playfield
-    #Queues.playfield_queue.task_done()
-    if(self.counter is None):
-      self.counter = view.get_number()
-    elif(view.get_number() > self.counter+1): # it is not the next image
-      self.backset[view.get_number()] = (view, playfield)
-      if(self.counter+1 in self.backset):
-        (view, playfield) = self.backset[self.counter+1]
-        del self.backset[self.counter+1]
-        self.counter += 1
-      else:
-        (view, playfield) = self.get_gameboy_view_processor() # get next values
-    else:
+
+    if (self.counter is None): # initalization
       self.counter = view.get_number()
 
-    #print(view.get_number())
-    self.calc_runtime()
-    return (view, playfield)
+    while(True):
+      if(view.get_number() > self.counter+1): # store current value
+        self.backset[view.get_number()] = (view, playfield)
+      else:
+        self.counter += 1
+        self.calc_runtime()
+        return (view, playfield) # leave while loop
+      # run through the backset
+
+      if (self.counter + 1 in self.backset): # check wether we have this already stored
+        (view, playfield) = self.backset[self.counter + 1]
+        del self.backset[self.counter + 1]
+        self.counter += 1
+        self.calc_runtime()
+        return (view, playfield) # leave while loop
+
+      (view, playfield) = Queues.playfield_queue.get()
 
 
   def calc_runtime(self):
     if(not self.run_time is None):
       time_passed = time.perf_counter() - self.run_time
-      self.lap_counter += 1
-      print(time_passed/self.lap_counter)
-    else:
+      #self.lap_counter += 1
+      print(time_passed)
       self.run_time = time.perf_counter()
+    else:
+      self.run_time = time.perf_counter() # starting time
 
   def state_machine(self):
     while not self.force_stop():
@@ -253,8 +149,17 @@ class Game:
       with Queues.playfield_image_queues[i].mutex:
         Queues.playfield_image_queues.clear()
 
+  def _start_capture_and_gameboyview_process(self, shift_score, capture_and_gameboy_view=None):
+    """
+    TODO: Finish this. We want to combine the capture and the gameboyview process but still run them in separate threads
+    :param shift_score:
+    :param capture_and_gameboy_view:
+    :return:
+    """
+    t = multiprocessing.Process(target=capture_and_gameboy_view, args=(shift_score, Queues.images_queue, Queues.playfield_image_queues),
+                                daemon=True, name="capture and gameboyview process")
+
   def _start_capture_thread(self):
-    # Start capturing thread
     #t = threading.Thread(target=capture, daemon=True, name="capture")
     t = multiprocessing.Process(target=capture, args=(Queues.images_queue, ), daemon=True, name="capture")
     t.start()
@@ -499,11 +404,13 @@ class Round:
         print("Paritiy: " + str(Playfield(clean_playfield).parity()))
         pass
 
-      self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
+      # This is slow...
+      #self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
 
-      self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
-                          self.preview_tracker.last(), self.preview_tracker.spawned_piece,
-                          self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
+      # This is slow...
+      #self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
+                          #self.preview_tracker.last(), self.preview_tracker.spawned_piece,
+                          #self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
 
       #self.timer.wait_then_restart()
 

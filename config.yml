@@ -22,6 +22,6 @@ rom_version: orig
 screen:
   bounding_box:
     height: 700
-    left: 112
+    left: 114
     top: 416
     width: 777

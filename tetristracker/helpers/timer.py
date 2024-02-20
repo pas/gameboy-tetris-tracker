@@ -1,6 +1,9 @@
 import time
 
 class Timer:
+  """
+  You need to call start before wait_then_restart.
+  """
   def __init__(self, delay=1000/62): # 60 images per second
     """
     Put in the delay in miliseconds

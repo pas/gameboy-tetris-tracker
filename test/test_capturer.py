@@ -46,8 +46,25 @@ class TestCapturer(unittest.TestCase):
       bounding_box = configs["screen"]["bounding_box"]
 
     capturer = MSSCapturer(bounding_box)
+    # TODO: Instead of writing the image, just check if the size is correct
     image = capturer.grab_image()
     cv2.imwrite("screenshots/non-trimmed.png", image)
-    image = capturer.trim(image)
-    cv2.imwrite("screenshots/trimmed.png", image)
+
+  def test_mss_capturer_delay(self):
+    with open('config.yml', 'r') as config_file:
+      configs = yaml.safe_load(config_file)
+      bounding_box = configs["screen"]["bounding_box"]
+
+    capturer = MSSCapturer(bounding_box, images_per_second=30)
+
+    start = time.perf_counter()
+    for i in range(0,60):
+      capturer.grab_image()
+
+    end = time.perf_counter()
+    passed = end - start
+
+    print(passed)
+    self.assertAlmostEqual(passed, 2, delta=0.03)
+
 
