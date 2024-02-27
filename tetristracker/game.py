@@ -7,12 +7,14 @@ import numpy as np
 from PIL import ImageOps
 from PIL import Image
 
+from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.storage.writer import Writer
 from tetristracker.image.gameboy_image import GameboyImage
 from tetristracker.image.image_saver import ImageSaver
 from tetristracker.processor.number_processor import SimplisticSequentialNumberProcessor
 from tetristracker.stats.stats import Stats
 from tetristracker.tile.tile import Tile
+from tetristracker.tile.tile_recognizer import TileRecognizer
 from tetristracker.unit.playfield import Playfield
 from tetristracker.processor.preview_processor import PreviewProcessor
 from tetristracker.tracker.preview_tracker import PreviewTracker
@@ -21,7 +23,7 @@ from tetristracker.tracker.lines_tracker import LinesTracker
 from tetristracker.tracker.score_tracker import ScoreTracker
 from tetristracker.tracker.playfield_tracker import PlayfieldTracker
 from tetristracker.workers.queues import Queues
-from tetristracker.workers.workers import prepare_gameboy_view, capture, prepare_playfield
+from tetristracker.workers.workers import prepare_gameboy_view, capture, prepare_playfield, store_and_plot
 
 
 class Game:
@@ -168,10 +170,15 @@ class Game:
       #t = threading.Thread(target=prepare_playfield, daemon=True, args=(playfield_image_queues[i],), name="prepare_playfield-"+str(i))
       t.start()
 
+  def _start_storage_and_plotting_process(self, plotter, storage):
+    p = multiprocessing.Process(target=store_and_plot, args=(Queues.result_queue,), daemon=True, name="storage_and_plotting")
+    p.start()
+
   def start(self):
     self._start_capture_thread()
     self._start_prepare_thread(self.shift_score)
     self._start_playfield_preparation_threads()
+    self._start_storage_and_plotting_process(self.plotter, self.writer)
 
     self.gameboy_view_processor, self.playfield_processor = self.get_gameboy_view_processor()
     self.state_machine()
@@ -190,9 +197,10 @@ class Game:
 
 
 class Round:
-  def __init__(self, game, saver, plotter, writer: Writer):
-    self.csv_file = writer
-    self.csv_file.restart()
+  # TODO: Adapt to this, that only saver and the newly result_queue (from Queues.result_queue) are passed
+  def __init__(self, game, saver, result_queue):
+    #self.csv_file = writer # TODO: This does not work anymore because the writer is not here!
+    #self.csv_file.restart() # TODO: This does not work anymore because the writer is not here!
 
     self.start_scores = 0
     self.start_lines = 0
@@ -205,9 +213,10 @@ class Round:
     self.playfield_tracker: PlayfieldTracker = PlayfieldTracker()
     self.stats = Stats()
     self.saver = saver
-    self.plotter = plotter
     self.game = game
-    #self.timer = Timer()
+    self.result_queue = result_queue
+
+    self.game_over = False
 
     # set in start()
     self.playfield = None
@@ -245,8 +254,8 @@ class Round:
     is_heart = not Tile(heart_image[0][0]).is_white()
     return self.numbers(level_image), is_heart
 
-  def start(self, processor, playfield):
-    self.playfield_tracker.track(Playfield.empty())
+  def start(self, processor : GameboyViewProcessor, playfield):
+    self.playfield_tracker.track(Playfield.empty()) # We always start with an empty playfield
     self.processor = processor
     self.playfield = playfield
 
@@ -256,19 +265,29 @@ class Round:
       # Retakes an image until no blending is visible
       self.retake()
 
-    self.saver.save(self.processor.original_image)
+    #self.saver.save(self.processor.original_image)
 
-    self.start_score = self.score(self.processor)
-    self.start_level, is_heart = self.level(self.processor)
-    self.start_lines = self.lines(self.processor)
+    self.start_score = self.score(self.processor)           # This might be None
+    self.start_level, is_heart = self.level(self.processor) # This might be None
+    self.start_lines = self.lines(self.processor)           # This might be None
 
-    # write current state to database
+    # this is here because the first tetromino does
+    # not get registered otherwise
     only_one, mino = self.playfield.only_one_type_of_mino()
     if (only_one):
-      self.preview_tracker.force_count(mino)
       start_preview = self.preview(self.processor)
-      self.csv_file.write(self.start_score, self.start_lines, self.start_level,
-                          start_preview, mino, True, self.playfield.playfield_array)
+      # This is the first time the tracker gets called
+      self.preview_tracker.track(start_preview, self.playfield_tracker)
+      self.preview_tracker.force_count(mino)
+
+      self.score_tracker.track(self.start_score)
+      self.level_tracker.track(self.start_level, is_heart)
+      self.lines_tracker.track(self.start_lines)
+      #self.playfield_tracker.track(self.playfield)
+      self._store_and_plot()
+      # TODO: Check above if this is all good or if we now count something twice
+      #self.csv_file.write(self.start_score, self.start_lines, self.start_level,
+                          #start_preview, mino, True, self.playfield.playfield_array)
 
     self.state_machine()
 
@@ -283,18 +302,21 @@ class Round:
             or break_as_number == 11005)
 
   def is_over(self):
-    # this is a very brittle hack. We just hope
-    # that not another combination of
-    # minos and whites return the same result
-    please_image = self.processor.get_please()
-    please_as_number = self.numbers(please_image)
-    return please_as_number == 116956
+    if not self.game_over: # a round that is over cannot be restarted!
+      tile = self.processor.get_bottom_left_corner_of_playfield_tile()
+      recognizer = TileRecognizer()
+      is_over = recognizer.is_finished_tile(tile.tile_image)
+
+      if(is_over):
+        self.game_over = is_over
+
+      return is_over
+
+    return True
 
   def idle(self):
     print("Game is idle")
-    #self.timer.start()
     while (self.is_paused() or self.is_over()) and not self.game.force_stop():
-      #self.timer.wait_then_restart()
       self.prepare()
 
   def state_machine(self):
@@ -347,22 +369,23 @@ class Round:
     """
     return self.playfield == None
 
+  def _store_and_plot(self):
+    self.result_queue.put(((self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats),
+                           (self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
+                            self.preview_tracker.last(), self.preview_tracker.spawned_piece,
+                            self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)))
+
   def run(self):
     """
     A round is in this state as long it is not
     on pause or does not have a blending playfield
     and the game is running.
     """
-    #self.timer.start()
 
     while (self.game.is_running(self.processor)
            and not self.game.force_stop()
            and not self.is_paused()
-           and not self.is_blending()
-           and not self.is_over()):  # Something like not processor.get_top_left_tile().is_black()
-      # This uses up time. We could make it faster
-      # by not saving every image but it only needs like 14 miliseconds
-      # self.saver.save(self.processor.original_image)
+           and not self.is_over()):
 
       print("")
       score = self.score(self.processor)
@@ -370,40 +393,38 @@ class Round:
       self.score_tracker.track(score)
 
       print("Tracked Score: " + str(self.score_tracker.last()))
-      # This is only here to collect images that
-      # could not get detected correctly
-      # This should not happen
+      # This is here to collect images that
+      # either could not get detected correctly
+      # or were detected as score in transition
       if (self.score_tracker.last() == -1):
-        print("stored debug image")
+        print("stored non-tracked image")
         cv2.imwrite("screenshots/images_to_retrain/" + str(score) + ".png",
                     GameboyImage(self.processor.get_score()).untile())
 
-        for tile in self.processor.get_score()[0]:
-          bordered = Image.fromarray(tile)
-          bordered = ImageOps.expand(bordered, border=10, fill='white')
-          bordered = np.array(bordered)
-          self.saver.save(bordered)
+        # This was used to get images to train tesseract
+        #for tile in self.processor.get_score()[0]:
+        #  bordered = Image.fromarray(tile)
+        #  bordered = ImageOps.expand(bordered, border=10, fill='white')
+        #  bordered = np.array(bordered)
+        #  self.saver.save(bordered)
 
       self.lines_tracker.track(self.lines(self.processor))
       self.level_tracker.track(*self.level(self.processor))
-      self.playfield_tracker.track(self.playfield)
-      self.preview_tracker.track(self.preview(self.processor), self.playfield_tracker)
 
-      # calculate statistics
-      clean_playfield = self.playfield_tracker.clean_playfield()
-      self.stats.calculate(self.lines_tracker, self.score_tracker, self.level_tracker)
-      print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
-      if (not np.isnan(np.array(clean_playfield, dtype=float)).any()):
-        print("Paritiy: " + str(Playfield(clean_playfield).parity()))
+      if(not self.is_blending()):
+        self.playfield_tracker.track(self.playfield)
+        self.preview_tracker.track(self.preview(self.processor), self.playfield_tracker)
 
-      # TODO: This is slow... should be in a separate process/thread
-      #self.plotter.show_plot(self.score_tracker.array, self.lines_tracker.array, self.preview_tracker.stats)
+        # calculate statistics
+        clean_playfield = self.playfield_tracker.clean_playfield()
+        self.stats.calculate(self.lines_tracker, self.score_tracker, self.level_tracker)
+        print("Tetris Rate: " + "{:.0%}".format(self.stats.get_tetris_rate()))
+        if (not np.isnan(np.array(clean_playfield, dtype=float)).any()):
+          print("Paritiy: " + str(Playfield(clean_playfield).parity()))
+      else:
+        # TODO: Better would be to update with new preview but without score_tracker
+        self.preview_tracker.reset_spawning()
 
-      # TODO: This is slow... should be in a separate process/thread
-      #self.csv_file.write(self.score_tracker.last(), self.lines_tracker.last(), self.level_tracker.last(),
-                          #self.preview_tracker.last(), self.preview_tracker.spawned_piece,
-                          #self.preview_tracker.tetromino_spawned, self.playfield_tracker.current.playfield_array)
-
-      #self.timer.wait_then_restart()
+      self._store_and_plot()
 
       self.prepare()

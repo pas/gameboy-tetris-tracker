@@ -5,6 +5,7 @@ from tetristracker.helpers.config import Config
 
 class CaptureSelection:
   def __init__(self, config : Config):
+    print(config)
     self.capturer = None
     self.name = ""
     self.config = config

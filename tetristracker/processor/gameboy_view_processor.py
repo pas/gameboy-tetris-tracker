@@ -36,6 +36,9 @@ class GameboyViewProcessor():
   def get_top_left_tile(self):
     return Tile(np.squeeze(self.tiled_image[0:1, 0:1].copy()))
 
+  def get_bottom_left_corner_of_playfield_tile(self):
+    return Tile(np.squeeze(self.tiled_image[17:18, 2:3].copy()))
+
   def get_continue(self):
     return self.tiled_image[9:10, 3:11].copy()
 

@@ -8,6 +8,7 @@ interceptor:
     api: 700
     index: 0
 mode: score
+storage: sqlite
 obs:
   bounding_box:
     height: 468

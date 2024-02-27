@@ -31,6 +31,7 @@ class SqliteWriter(Writer):
     Expects a numpy array as playfield
     """
     time = datetime.datetime.now()
+    # TODO: This time is now totally wrong. Should be outside this method!
     self._write(score, lines, level, time.strftime("%Y/%m/%d %H:%M:%S.%f"), preview, tetromino_in_play, spawned, playfield.tolist())
 
   def _write(self, score : int, lines : int, level : int, time : datetime.datetime, preview : int, tetromino_in_play : int, spawned : bool, playfield):

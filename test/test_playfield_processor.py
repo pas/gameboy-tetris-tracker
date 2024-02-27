@@ -1,7 +1,8 @@
 import unittest
 
 from test.helpers import create_testing_array_s2, create_testing_array_s1, create_testing_array_full_view_2, \
-  create_testing_array_full_view, get_image, create_gameboy_view_processor_with, get_number
+  create_testing_array_full_view, get_image, create_gameboy_view_processor_with, get_number, \
+  create_testing_array_full_view_3
 from tetristracker.processor.playfield_processor import PlayfieldProcessor
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from PIL import Image
@@ -140,6 +141,13 @@ class TestPlayfieldProcessor(unittest.TestCase):
     playfield_image = processor.get_playfield()
     playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
     self.performance(playfield, create_testing_array_full_view_2())
+
+  def test_full_view_j_vs_s_piece(self):
+    image = get_image("test/full-view/gameboy-full-view-problematic-recognition.png")
+    processor = GameboyViewProcessor(image)
+    playfield_image = processor.get_playfield()
+    playfield = PlayfieldProcessor(playfield_image, image_is_tiled=True).run(save_tiles=True).playfield_array
+    self.performance(playfield, create_testing_array_full_view_3())
 
   def test_second_scenario(self):
     self.full_image("test/scenario-2-high-res.png", create_testing_array_s2())

@@ -3,10 +3,9 @@ from tetristracker.plotter.piece_distribution_plotter import PieceDistributionPl
 from tetristracker.plotter.progress_plotter import ProgressPlotter
 
 class PlotterSelection:
-  def __init__(self, config : Config):
+  def __init__(self):
     self.plotter = None
     self.name = ""
-    self.config = config
 
   def get(self):
     return self.plotter

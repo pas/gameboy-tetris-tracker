@@ -1,22 +1,11 @@
 import numpy as np
 
-from tetristracker.capturer.capture_selection import CaptureSelection
-from tetristracker.helpers.config import Config
-from tetristracker.workers.get import Get
+from tetristracker.workers.get.get import Get
 
 
 class ImageCapture(Get):
-  def __init__(self):
-    config = Config()
+  def __init__(self, capturer):
     self.previous = None
-
-    # create capturer (this seems to have to be inside
-    # the local thread or else mss doesn't work)
-    capture_selection = CaptureSelection(config)
-    capture_selection.select(config.get_capturer())
-
-    capturer = capture_selection.get()
-
     self.capturer = capturer
 
   def get(self):

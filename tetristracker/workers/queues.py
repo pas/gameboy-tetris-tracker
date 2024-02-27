@@ -16,3 +16,8 @@ class Queues():
     Queue where there Playfield object is stored
   """
   playfield_queue = Queue(maxsize=2*len(playfield_image_queues))
+  """
+    Queue where results and plotting data is passed to
+    the next process
+  """
+  result_queue = Queue()

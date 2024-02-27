@@ -75,6 +75,10 @@ class Config():
     self._load()
     return self.config["plotter"]
 
+  def get_storage(self):
+    self._load()
+    return self.config["storage"]
+
   def set_mode(self, mode):
     self._load()
     self.config["mode"] = mode

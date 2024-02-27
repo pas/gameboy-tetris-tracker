@@ -49,18 +49,6 @@ class DigitProcessor(OCRProcessor):
     # Use training data specifically trained for tetris numbers
     return pytesseract.image_to_string(image, config=r'--dpi 252 --psm 10 --tessdata-dir .', lang="tetris").strip()
 
-def process(tile_image):
-  """
-  The idea was to use this
-  to paralelize work. Did not work out...
-  """
-  tile = Tile(tile_image)
-  if not tile.is_white(threshhold=0.77):
-    processor = DigitProcessor(tile_image)
-    return str(processor.get_number())
-  else:
-    return ''
-
 class SimplisticDigitProcessor(OCRProcessor):
   def __init__(self, tile : Tile):
     super().__init__(tile)
@@ -106,6 +94,8 @@ class SimplisticSequentialNumberProcessor(OCRProcessor):
     number_string = ""
     for tile_image in image[0]:
       tile = Tile(tile_image)
+      if tile.center_contains_grey(): # we return if have an unclear number
+        return "x" # if we return a non-number then #is_digit will be False
       if not tile.is_white(threshhold=0.77):
         processor = SimplisticDigitProcessor(tile)
         number_string += str(processor.get_number())

@@ -1,6 +1,6 @@
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
 from tetristracker.processor.playfield_processor import PlayfieldProcessor
-from tetristracker.workers.get import Get
+from tetristracker.workers.get.get import Get
 
 
 class GameboyViewProcessorToPlayfieldProcessor(Get):
@@ -14,5 +14,5 @@ class GameboyViewProcessorToPlayfieldProcessor(Get):
     playfield = None
     if(gameboyview.get_top_left_tile().is_black()):
       processor = PlayfieldProcessor(gameboyview.get_playfield(), image_is_tiled=True)
-      playfield = processor.run()
+      playfield = processor.run(return_on_transition=True)
     return gameboyview, playfield

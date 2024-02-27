@@ -56,6 +56,62 @@ class TestPlayfield(unittest.TestCase):
     self.assertEqual(4,np.sum(res==5))
     self.assertSequenceEqual([5,-99,5,5,-99,5], (res[15:19, 8:10]).flatten().tolist())
 
+  def test_playfield_with_gambeoy_view_difference(self):
+    gv1 = create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv2 = create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+    playfield_before = get_playfield(gv1)
+    playfield_after = get_playfield(gv2)
+    res = playfield_before.difference(playfield_after)
+    self.assertEqual(8,np.sum(res.playfield_array==1))
+    expected = [  1,  1,-99,-99,-99,
+                -99,  1,  1,-99,-99,
+                -99,-99,  1,  1, -99,
+                -99,-99,-99,  1,  1]
+    result = (res.playfield_array[1:5, 3:8]).flatten().tolist()
+    self.assertSequenceEqual(expected, result)
+
+    # both direction should yield same result
+    res = playfield_after.difference(playfield_before)
+    self.assertEqual(8,np.sum(res.playfield_array==1))
+    result = (res.playfield_array[1:5, 3:8]).flatten().tolist()
+    self.assertSequenceEqual(expected, result)
+
+  def test_playfield_with_gambeboy_view_union(self):
+    gv1 = create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv2 = create_gameboy_view_processor_with("test/sequence/sequence-1-3.png")
+    playfield_before = get_playfield(gv1)
+    playfield_after = get_playfield(gv2)
+    res = playfield_before.union(playfield_after)
+    self.assertEqual(4,np.sum(res.playfield_array==5))
+    self.assertEqual(8,np.sum(res.playfield_array==1))
+    expected = [  1,  1,-99,-99,-99,
+                -99,  1,  1,-99,-99,
+                -99,-99,  1,  1, -99,
+                -99,-99,-99,  1,  1]
+    result = (res.playfield_array[1:5, 3:8]).flatten().tolist()
+    self.assertSequenceEqual(expected, result)
+    self.assertSequenceEqual(expected, result)
+
+  def test_playfield_with_gambeboy_view_union_same_image(self):
+    gv1 = create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    gv2 = create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    playfield_before = get_playfield(gv1)
+    playfield_after = get_playfield(gv2)
+    res = playfield_before.union(playfield_after)
+    self.assertTrue(res.is_equal(playfield_before))
+    self.assertTrue(res.is_equal(playfield_after))
+
+
+  def test_playfield_with_gambeboy_view_has_gaps(self):
+    gv = create_gameboy_view_processor_with("test/sequence/sequence-1-2.png")
+    playfield = get_playfield(gv)
+    self.assertTrue(playfield.has_gaps())
+
+  def test_playfield_with_gambeboy_view_no_gaps(self):
+    gv = create_gameboy_view_processor_with("test/sequence/sequence-3-3.png")
+    playfield = get_playfield(gv)
+    self.assertFalse(playfield.has_gaps())
+
   def test_playfield_dont_replace_full_row(self):
     playfield = Playfield(create_testing_array_full_line())
 
@@ -167,13 +223,13 @@ class TestPlayfield(unittest.TestCase):
     # There should be four new minos
     self.assertEqual(4, comparison_mino)
 
-    playfield_difference = playfield2.playfield_difference(playfield1)
+    playfield_difference = playfield2.new_minos(playfield1)
     # L-piece is now on the left and previously occupied
     # the space of the s piece. Which leaves a piece of
     # the s-piece visible.
     self.assertEqual(5, playfield_difference.count_minos())
 
-    playfield_difference = playfield1.playfield_difference(playfield2)
+    playfield_difference = playfield1.new_minos(playfield2)
 
     # The s-piece covers the l-piece an only leave one
     # edge of the l-piece

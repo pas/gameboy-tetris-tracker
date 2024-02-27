@@ -128,14 +128,19 @@ class Playfield():
 
   def count_minos(self, without_cleared_lines=False):
     """
+    Counts all minos visible on the playfield.
+
+    It doesn't discriminate between different
+    minos.
+
     This takes into account previously cleared lines.
-    Use without_cleared_lines if this is not
+    Use without_cleared_lines set to True if this is not
     what you want.
     """
     array = self.binarize()
     nr_of_minos_in_cleared_lines = 0
     if(not without_cleared_lines):
-      nr_of_minos_in_cleared_lines =  self.line_clear_count * pp.PlayfieldProcessor.needed_number_of_tiles_width
+      nr_of_minos_in_cleared_lines = self.line_clear_count * pp.PlayfieldProcessor.needed_number_of_tiles_width
     return np.sum(array) + nr_of_minos_in_cleared_lines
 
   def all_but(self, mino_index):
@@ -156,6 +161,29 @@ class Playfield():
     """
     return previous_playfield.count_minos()-self.count_minos()
 
+  def has_gaps(self):
+    """
+    Does check if there are empty lines between
+    pieces.
+
+    This is important for clean boards
+    as this should never be true for a clean
+    board without a falling piece.
+
+    :return: True if there are empty lines between minos.
+    False otherwise.
+    """
+    res = np.sum(self.playfield_array, axis=1)
+
+    might_have_gaps = False
+    for line in np.flip(res): # bottom to top
+      if(line == -990):
+        might_have_gaps = True
+      if(might_have_gaps and line != -990):
+        return True
+
+    return False
+
   def same_minos(self, other_playfield : Self):
     """
     Returns True if there are the same minos
@@ -164,25 +192,58 @@ class Playfield():
     """
     uniques, counts = np.unique(self.playfield_array, return_counts=True)
     uniques2, counts2 = np.unique(other_playfield.playfield_array, return_counts=True)
+
+    # We check whether the same unique values were returned
+    # and that those are present in the same numbers
     return np.array_equal(uniques, uniques2) and np.array_equal(counts, counts2)
 
   def intersection(self, playfield):
+    """
+    This operation is commuative on the
+    shape of empty to filled minos but
+    not commmutative on the minos at
+    each non-empty space!
+
+    Example:
+    p1 = [[-99,1,-99]] and p2 = [[-99,2,2]]
+
+    p1.intersection(p2)
+    => [[-99,1,-99]]
+
+    p2.intersection(p1)
+    => [[-99,2,-99]]
+    """
     intersection = self.playfield_array.copy()
     intersection[self.binarize() & playfield.binarize() == 0] = TileRecognizer.EMPTY
     return intersection
 
+  def union(self, playfield : Self):
+    union_self = self.playfield_array.copy()
+    union_other = playfield.playfield_array.copy()
+    union_other_mask = playfield.binarize() == 1
+    union_self[union_other_mask] = union_other[union_other_mask]
+    return Playfield(union_self)
+
   def difference(self, playfield : Self):
     """
-    Returns a play field with all overlapping
+    Returns a playfield with all overlapping
     elements removed.
+
+    This operation is commutative.
 
     This does not care if
     the overlapping elements are the same
     mino or not.
     """
-    difference = self.playfield_array.copy()
-    difference[self.binarize() & playfield.binarize() == 1] = TileRecognizer.EMPTY
-    return Playfield(difference)
+    difference_self = self.playfield_array.copy()
+    mask = self.binarize() & playfield.binarize() == 1
+    difference_self[mask] = TileRecognizer.EMPTY
+    difference_other = playfield.playfield_array.copy()
+    difference_other_pf = Playfield(difference_other)
+    difference_other[mask] = TileRecognizer.EMPTY
+    other_mask = difference_other_pf.binarize() == 1
+    difference_self[other_mask] = difference_other[other_mask]
+    return Playfield(difference_self)
 
   def is_equal(self, previous_playfield : Self):
     """
@@ -196,13 +257,19 @@ class Playfield():
     summed_difference = (self.playfield_array - previous_playfield.playfield_array).sum()
     return summed_difference == 0
 
-  def playfield_difference(self, previous_playfield: Self):
+  def new_minos(self, previous_playfield: Self):
     """
     Returns a playfield that only shows the
-    minos on tiles that are not already taken
-    by the previous playfield. Be aware that
-    that it does not care if the minos at the tiles that
-    are ignored are the same or not.
+    new minos that were not already there
+    in the previous playfield.
+
+    Be aware that this method is indifferent
+    to if the minos are the same or not.
+    It only checks if there was any mino.
+
+    This operation is not commutative. It depends
+    on the calling order (see example)
+
     Example:
     p1 = [[1,2,-99][-99,-99,-99]]
     p2 = [[-99,1,-99][-99,-99,2][
@@ -210,6 +277,8 @@ class Playfield():
     -> [[1,-99,-99][-99,-99,-99]]
     p2.playfield_difference(p1)
     -> [[-99,-99,-99],[-99,-99,2]]
+
+    TODO: Currently only used in tests...
     """
     binarized_previous = previous_playfield.binarize()
     binarized_difference = binarized_previous - self.binarize()

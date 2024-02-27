@@ -33,10 +33,13 @@ class PreviewTracker(Tracker):
     self._update(preview, playfield_tracker)
     super().track(preview)
 
+  def reset_spawning(self):
+    self.tetromino_spawned = False
+
   def force_count(self, mino):
     """
-    This will count the set tetromino
-    in the next round.
+    This will count the given mino
+    as a tetromino that has spawned
     """
     self.tetromino_spawned = True
     self.remember_preview = mino

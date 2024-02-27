@@ -44,8 +44,6 @@ class PlayfieldProcessor():
 
     in_transition = False
 
-    # TODO: We could parallelize this as it is only working on each tile
-    # TODO: Tried it... did not work out...
     for column_nr, column in enumerate(self.tiled_image):
       for row_nr, tile_image in enumerate(column):
         tile = Tile(tile_image, row_nr=row_nr, column_nr=column_nr)
@@ -58,7 +56,6 @@ class PlayfieldProcessor():
         if(tile_in_transition and return_on_transition):
           return None
 
-        # TODO: Too many transions get recognized. This is probably because I changed to grey images only.
         in_transition = tile_in_transition or in_transition
 
         result.append(self.recognizer.recognize(tile_image))

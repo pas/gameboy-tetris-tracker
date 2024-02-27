@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 
-class Get():
+class Get:
   @abstractmethod
   def get(self):
     pass

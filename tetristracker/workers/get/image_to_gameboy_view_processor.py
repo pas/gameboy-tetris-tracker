@@ -1,6 +1,6 @@
 from tetristracker.image.image_saver import ImageSaver
 from tetristracker.processor.gameboy_view_processor import GameboyViewProcessor
-from tetristracker.workers.get import Get
+from tetristracker.workers.get.get import Get
 
 
 class ImageToGameboyViewProcessor(Get):

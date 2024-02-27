@@ -9,7 +9,7 @@ class Tile:
   """
   STANDARD_WIDTH = 24
   STANDARD_HEIGHT = 24
-  THRESHOLD = 300
+  THRESHOLD = 100
 
   def __init__(self, tile_image, column_nr=None, row_nr=None):
     self.tile_image = np.array(Image.fromarray(tile_image).convert('L').resize((Tile.STANDARD_WIDTH, Tile.STANDARD_HEIGHT), Image.Resampling.BOX))
@@ -39,6 +39,15 @@ class Tile:
     arr = np.array(self.grey_image[border_height:Tile.STANDARD_HEIGHT-border_height, border_width:Tile.STANDARD_WIDTH-border_width], dtype=np.int32)
     rms = np.sqrt(np.mean(np.square(arr)))
     return rms
+
+  def center_contains_grey(self):
+    border_width = int(Tile.STANDARD_WIDTH/3)
+    border_height = int(Tile.STANDARD_HEIGHT/3)
+    center_image = self.grey_image[border_height:Tile.STANDARD_HEIGHT - border_height,
+                   border_width:Tile.STANDARD_WIDTH - border_width]
+    threshold = 90
+    grey_values = center_image[(center_image < (255-threshold)) & (center_image > threshold)]
+    return len(grey_values) >= 18 # around two "original" pixels
 
   def is_in_transition(self):
     return not self.is_white() and self.get_min() > Tile.THRESHOLD
@@ -126,14 +135,11 @@ class Tile:
     return image
 
   def get_max(self):
-    return np.argmax(np.sum(self.tile_image, axis=-1))
+    return np.max(self.tile_image.flatten())
 
   def get_min(self):
     """
-    Sums each pixel up an returns the minimum
-    value. More or less the value of the darkest
-    pixel.
+    Value of the darkest
+    pixel. 0 if black. 255 if white.
     """
-    sum = np.sum(self.tile_image, axis=-1).flatten()
-    res = np.argmin(sum)
-    return sum[res]
+    return np.min(self.tile_image.flatten())
